@@ -1,0 +1,12 @@
+name: Maplands
+main: com.bergerkiller.bukkit.maplands.Maplands
+version: ${project.version}
+authors: [bergerkiller]
+description: Minecraft worlds in the map dimension
+depend: [BKCommonLib]
+metrics: true
+dev-url: ${project.url}
+commands:
+    map:
+        description: map stuff
+        usage: idunno lol
