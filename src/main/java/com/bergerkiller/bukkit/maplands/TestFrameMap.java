@@ -2,8 +2,10 @@ package com.bergerkiller.bukkit.maplands;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.entity.Player;
 
 import com.bergerkiller.bukkit.common.events.map.MapKeyEvent;
 import com.bergerkiller.bukkit.common.map.MapColorPalette;
@@ -36,19 +38,34 @@ public class TestFrameMap extends MapDisplay {
 
     private void render() {
         CommonTagCompound nbt = ItemUtil.getMetaTag(this.getMapItem());
-        int mdx = nbt.getValue("dx", 0);
-        int mdz = nbt.getValue("dz", 0);
-        
-        // Start coordinates for the view
-        startBlock = Bukkit.getWorld("testworld_flat").getBlockAt(-200 + mdx, 25, -132 + mdz);
+        int px = nbt.getValue("px", 0);
+        int py = nbt.getValue("py", 0);
+        int pz = nbt.getValue("pz", 0);
+        String worldName = nbt.getValue("mapWorld", "");
+        if (worldName.length() == 0) {
+            Player player = this.getOwners().get(0);
+            worldName = player.getWorld().getName();
+            px = player.getLocation().getBlockX();
+            py = player.getLocation().getBlockY() + 32;
+            pz = player.getLocation().getBlockZ();
+            nbt.putValue("px", px);
+            nbt.putValue("py", py);
+            nbt.putValue("pz", pz);
+            nbt.putValue("mapWorld", worldName);
+            this.setMapItem(this.getMapItem());
+        }
+        World world = Bukkit.getWorld(worldName);
 
+        // Start coordinates for the view
+        startBlock = world.getBlockAt(px, py, pz);
+        
         this.getLayer().setRelativeBrushMask(null);
         this.getLayer().setDrawDepth(0);
         this.getLayer().fill(MapColorPalette.COLOR_RED);
         this.getLayer().clearDepthBuffer();
         this.getLayer().setRelativeBrushMask(sprites.getBrushTexture());
 
-        for (int dy = 0; dy < 100; dy++) {
+        for (int dy = 0; dy < 256; dy++) {
             getLayer().setDrawDepth(dy);
             for (int dx = 0; dx < 10; dx++) {
                 for (int dz = 0; dz < 10; dz++) {
@@ -64,8 +81,8 @@ public class TestFrameMap extends MapDisplay {
     @Override
     public void onKeyPressed(MapKeyEvent event) {
         CommonTagCompound nbt = ItemUtil.getMetaTag(this.getMapItem());
-        int mdx = nbt.getValue("dx", 0);
-        int mdz = nbt.getValue("dz", 0);
+        int mdx = nbt.getValue("px", 0);
+        int mdz = nbt.getValue("pz", 0);
         //mdx += event.getKey().dx();
         //mdz += event.getKey().dy();
         if (event.getKey() == Key.UP) {
@@ -82,8 +99,8 @@ public class TestFrameMap extends MapDisplay {
             mdz += facing_lft.getModZ();
         }
         
-        nbt.putValue("dx", mdx);
-        nbt.putValue("dz", mdz);
+        nbt.putValue("px", mdx);
+        nbt.putValue("pz", mdz);
         this.setMapItem(this.getMapItem());
         this.render();
     }

@@ -4,7 +4,7 @@
 
   <groupId>com.bergerkiller.bukkit</groupId>
   <artifactId>Maplands</artifactId>
-  <version>1.0</version>
+  <version>0.1</version>
   <packaging>jar</packaging>
 
   <name>Maplands</name>

@@ -1,19 +1,13 @@
 package com.bergerkiller.bukkit.maplands;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.util.HashMap;
 import java.util.Random;
 
-import org.bukkit.Material;
-
-import com.bergerkiller.bukkit.common.map.MapColorPalette;
 import com.bergerkiller.bukkit.common.map.MapResourcePack;
 import com.bergerkiller.bukkit.common.map.MapTexture;
 import com.bergerkiller.bukkit.common.map.util.Matrix4f;
 import com.bergerkiller.bukkit.common.map.util.Vector3f;
 import com.bergerkiller.bukkit.common.wrappers.BlockData;
-import com.bergerkiller.bukkit.common.wrappers.IntHashMap;
 
 /**
  * Renders and caches isometric block sprites
@@ -25,8 +19,7 @@ public class IsometricBlockSprites {
 
     public IsometricBlockSprites() {
         this.resources = MapResourcePack.VANILLA;
-        this.brushTexture = MapTexture.fromImageFile("C:\\Users\\QT\\Desktop\\TexturePack\\mask2.png");
-        //this.brushTexture = this.getSprite(BlockData.fromMaterial(Material.STONE));
+        this.brushTexture = MapTexture.loadPluginResource(Maplands.plugin, "com/bergerkiller/bukkit/maplands/mask2.png");
     }
 
     /**
