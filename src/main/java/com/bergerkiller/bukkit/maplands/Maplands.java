@@ -7,6 +7,7 @@ import org.bukkit.inventory.ItemStack;
 import com.bergerkiller.bukkit.common.Common;
 import com.bergerkiller.bukkit.common.PluginBase;
 import com.bergerkiller.bukkit.common.map.MapDisplay;
+import com.bergerkiller.bukkit.common.map.MapResourcePack;
 
 public class Maplands extends PluginBase {
     public static Maplands plugin;
@@ -15,6 +16,8 @@ public class Maplands extends PluginBase {
 	public void enable() {
 	    plugin = this;
 	    //this.register(new TCMapListener());
+	    
+	    MapResourcePack.VANILLA.load();
 	}
 
 	@Override
