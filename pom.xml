@@ -17,13 +17,17 @@
   </properties>
 
   <repositories>
-    <!-- Repo for access to Bukkit -->
+    <!-- Repo for access to CraftBukkit -->
     <repository>
       <id>spigot-repo</id>
       <url>https://hub.spigotmc.org/nexus/content/groups/public/</url>
     </repository>
-    <!-- Repo for access to BKCommonLib -->
-    <!-- TODO! -->
+
+    <!-- Repo for access to BKCommonLib, MyWorlds, SignLink -->
+    <repository>
+        <id>MG-Dev Jenkins CI Maven Repository</id>
+        <url>https://ci.mg-dev.eu/plugin/repository/everything</url>
+    </repository>
   </repositories>
 
   <dependencies>
