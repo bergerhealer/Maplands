@@ -16,6 +16,7 @@ import com.bergerkiller.bukkit.common.map.MapPlayerInput.Key;
 import com.bergerkiller.bukkit.common.nbt.CommonTagCompound;
 import com.bergerkiller.bukkit.common.utils.FaceUtil;
 import com.bergerkiller.bukkit.common.utils.ItemUtil;
+import com.bergerkiller.bukkit.common.utils.MathUtil;
 import com.bergerkiller.bukkit.common.utils.WorldUtil;
 import com.bergerkiller.bukkit.common.wrappers.BlockData;
 
@@ -28,14 +29,14 @@ public class TestFrameMap extends MapDisplay {
     BlockFace facing_lft = FaceUtil.rotate(facing_bwd, 2);
     Block startBlock;
     
-    private int[] mapping = {
+    final int[] mapping = {
             -32,   -21,   -10,
             0,     11,     22,
             32,    43,     54,
             64,    75,     86,
             96,    107,    118
     };
-
+    
     private void render() {
         CommonTagCompound nbt = ItemUtil.getMetaTag(this.getMapItem());
         int px = nbt.getValue("px", 0);
@@ -68,7 +69,7 @@ public class TestFrameMap extends MapDisplay {
         for (int dy = 0; dy < 256; dy++) {
             getLayer().setDrawDepth(dy);
             for (int dx = 0; dx < 10; dx++) {
-                for (int dz = 0; dz < 10; dz++) {
+                for (int dz = 0; dz < mapping.length; dz++) {
                     drawBlock(dx, dy, dz);
                 }
             }
@@ -116,41 +117,45 @@ public class TestFrameMap extends MapDisplay {
     }
 
     public void drawBlock(int px, int py, int pz) {
-        // This state is impossible and never occurs (diagonal relationship)
-        if ((px & 0x1) != ((pz + py) & 0x1)) {
+        // Out of range on the map
+        if (pz < 0 || pz >= mapping.length) {
             return;
         }
 
-        int dx = ((px + (py & 0x1)) >> 1) + -(pz >> 1);
-        int dy = -pz - (py & ~0x1);
+        // Checks whether the tile coordinates are valid
+        if (MathUtil.floorMod((px * 3) + (py * 2) + (-pz * 1), 6) != 4) {
+            return;
+        }
+
+        int pzl = (pz + ((py + 4) % 6)) / 3;
+
+        int dx = ((px + (py & 0x1)) >> 1) + -(pzl >> 1);
+        int dy = -pzl - (py & ~0x1);
         int dz = (dx + -dy) - py;
 
         // repeating pattern of 6, increasing every loop
         // 0, 0, 0, 0, 1, 1 ... 2, 2, 2, 2, 3, 3 ... etc.
-        int v = py / 6;
-        int k = (py - 6 * v);
-        int n = 2 * v + k / 4;
 
-        // repeating pattern of 6, looping
-        // 4, 5, 0, 1, 2, 3 ... 4, 5, 0, 1, 2, 3 ... etc
-        int p = (py + 4) % 6;
+        int v = 6 * (py / 6);
+        int n = (v) / 3 + (py - v) / 4;
 
-        drawBlock(dx + n, dy + 2 * n, dz - n, px, py, (pz * 3) - p);
+        //System.out.println("dy " + py + "  " + n);
+
+        dx += n;
+        dy += 2 * n;
+        dz += -n;
+        
+        int draw_x = ((px - 1) * BLOCK_SIZE)/2;
+        int draw_y = mapping[pz];
+        
+        drawBlock(dx, dy, dz, draw_x, draw_y);
     }
 
-    public void drawBlock(int dx, int dy, int dz, int px, int py, int pz) {
-        if (pz < 0 || pz >= mapping.length) {
-            return;
-        }
-        
+    public void drawBlock(int dx, int dy, int dz, int draw_x, int draw_y) {        
         Block block = this.startBlock.getRelative(dx, dy, dz);
         MapTexture sprite = this.sprites.getSprite((dy == Integer.MIN_VALUE) ? BlockData.fromMaterial(Material.GLOWSTONE) : WorldUtil.getBlockData(block));
 
-        int x = ((px - 1) * BLOCK_SIZE)/2;
-        //int y = ((pz - 3) * (sprite.getHeight()) - 1) / 4;
-        int y = mapping[pz];
-        
-        getLayer().draw(sprite, x, y);
+        getLayer().draw(sprite, draw_x, draw_y);
     }
 
     @Override
