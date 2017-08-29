@@ -1,20 +1,21 @@
 package com.bergerkiller.bukkit.maplands;
 
 import java.util.HashMap;
-import java.util.Random;
+
+import org.bukkit.block.Block;
 
 import com.bergerkiller.bukkit.common.map.MapResourcePack;
 import com.bergerkiller.bukkit.common.map.MapTexture;
 import com.bergerkiller.bukkit.common.map.util.Matrix4f;
 import com.bergerkiller.bukkit.common.map.util.Vector3f;
-import com.bergerkiller.bukkit.common.wrappers.BlockData;
+import com.bergerkiller.bukkit.common.wrappers.BlockRenderOptions;
 
 /**
  * Renders and caches isometric block sprites
  */
 public class IsometricBlockSprites {
     private MapResourcePack resources;
-    private final HashMap<BlockData, MapTexture> spriteCache = new HashMap<BlockData, MapTexture>();
+    private final HashMap<BlockRenderOptions, MapTexture> spriteCache = new HashMap<BlockRenderOptions, MapTexture>();
     private final MapTexture brushTexture;
 
     public IsometricBlockSprites() {
@@ -31,33 +32,36 @@ public class IsometricBlockSprites {
         return this.brushTexture;
     }
 
-    Random r = new Random();
     /**
      * Gets the texture sprite for a particular block
      * 
      * @param block to get the sprite
      * @return sprite texture
      */
-    public MapTexture getSprite(BlockData block) {
-        MapTexture result = spriteCache.get(block);
+    public MapTexture getSprite(Block block) {
+        BlockRenderOptions options = BlockRenderOptions.fromBlock(block);
+        MapTexture result = spriteCache.get(options);
         if (result == null) {
             result = MapTexture.createEmpty(32, 43);
 
             Matrix4f transform = new Matrix4f();
             //transform.translate(result.getWidth(), 0.0f, result.getWidth() - 1);
             //transform.scale(1.45f, 1.0f, 1.71f);
-
+            
             transform.translate(result.getWidth(), 0.0f, result.getWidth() - 2);
             transform.scale(1.45f, 1.0f, 1.71f);
             
             transform.rotateX(-45.0f);
             transform.rotateY(225.0f);
 
+            // Rotate 180 because of view (was rotated around 225)
+            transform.rotateOrigin(new Vector3f(8,8,8), new Vector3f(0, 180, 0));
+
             //map.fill(MapColorPalette.COLOR_RED);
             result.setLightOptions(0.2f, 0.8f, new Vector3f(-1.0f, 1.0f, -1.0f));
-            result.drawModel(this.resources.getBlockModel(block), transform);
+            result.drawModel(this.resources.getBlockModel(options), transform);
 
-            spriteCache.put(block, result);
+            spriteCache.put(options, result);
         }
         return result;
     }

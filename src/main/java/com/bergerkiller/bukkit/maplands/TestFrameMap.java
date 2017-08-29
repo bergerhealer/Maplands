@@ -19,6 +19,7 @@ import com.bergerkiller.bukkit.common.utils.ItemUtil;
 import com.bergerkiller.bukkit.common.utils.MathUtil;
 import com.bergerkiller.bukkit.common.utils.WorldUtil;
 import com.bergerkiller.bukkit.common.wrappers.BlockData;
+import com.bergerkiller.bukkit.common.wrappers.BlockRenderOptions;
 
 public class TestFrameMap extends MapDisplay {
     private IsometricBlockSprites sprites;
@@ -153,7 +154,7 @@ public class TestFrameMap extends MapDisplay {
 
     public void drawBlock(int dx, int dy, int dz, int draw_x, int draw_y) {        
         Block block = this.startBlock.getRelative(dx, dy, dz);
-        MapTexture sprite = this.sprites.getSprite((dy == Integer.MIN_VALUE) ? BlockData.fromMaterial(Material.GLOWSTONE) : WorldUtil.getBlockData(block));
+        MapTexture sprite = this.sprites.getSprite(block);
 
         getLayer().draw(sprite, draw_x, draw_y);
     }
