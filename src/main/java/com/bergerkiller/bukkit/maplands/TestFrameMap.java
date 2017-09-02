@@ -1,12 +1,12 @@
 package com.bergerkiller.bukkit.maplands;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 
+import com.bergerkiller.bukkit.common.bases.IntVector3;
 import com.bergerkiller.bukkit.common.events.map.MapKeyEvent;
 import com.bergerkiller.bukkit.common.map.MapColorPalette;
 import com.bergerkiller.bukkit.common.map.MapDisplay;
@@ -17,20 +17,15 @@ import com.bergerkiller.bukkit.common.nbt.CommonTagCompound;
 import com.bergerkiller.bukkit.common.utils.FaceUtil;
 import com.bergerkiller.bukkit.common.utils.ItemUtil;
 import com.bergerkiller.bukkit.common.utils.MathUtil;
-import com.bergerkiller.bukkit.common.utils.WorldUtil;
-import com.bergerkiller.bukkit.common.wrappers.BlockData;
-import com.bergerkiller.bukkit.common.wrappers.BlockRenderOptions;
 
 public class TestFrameMap extends MapDisplay {
     private IsometricBlockSprites sprites;
     private final int BLOCK_SIZE = 32;
-    BlockFace facing_fwd = BlockFace.NORTH_EAST;
-    BlockFace facing_rgt = FaceUtil.rotate(facing_fwd, 2);
-    BlockFace facing_bwd = FaceUtil.rotate(facing_rgt, 2);
-    BlockFace facing_lft = FaceUtil.rotate(facing_bwd, 2);
-    Block startBlock;
-    
-    final int[] mapping = {
+    private Block startBlock;
+    private static final int BACK_VIEW = 100; // amount of layers visible 'behind' the current block
+    private static final int FORWARD_VIEW = 200; // amount of layers visible 'after' the current block
+
+    static final int[] mapping = {
             -32,   -21,   -10,
             0,     11,     22,
             32,    43,     54,
@@ -43,12 +38,14 @@ public class TestFrameMap extends MapDisplay {
         int px = nbt.getValue("px", 0);
         int py = nbt.getValue("py", 0);
         int pz = nbt.getValue("pz", 0);
+        BlockFace facing = nbt.getValue("facing", BlockFace.NORTH_EAST);
+        int zoom = nbt.getValue("zoom", 4);
         String worldName = nbt.getValue("mapWorld", "");
         if (worldName.length() == 0) {
             Player player = this.getOwners().get(0);
             worldName = player.getWorld().getName();
             px = player.getLocation().getBlockX();
-            py = player.getLocation().getBlockY() + 32;
+            py = player.getLocation().getBlockY();
             pz = player.getLocation().getBlockZ();
             nbt.putValue("px", px);
             nbt.putValue("py", py);
@@ -58,20 +55,23 @@ public class TestFrameMap extends MapDisplay {
         }
         World world = Bukkit.getWorld(worldName);
 
+        // Get the correct sprites
+        this.sprites = IsometricBlockSprites.getSprites(facing, zoom);
+
         // Start coordinates for the view
-        startBlock = world.getBlockAt(px, py, pz);
-        
+        this.startBlock = world.getBlockAt(px, py, pz);
+
         this.getLayer().setRelativeBrushMask(null);
         this.getLayer().setDrawDepth(0);
         this.getLayer().fill(MapColorPalette.COLOR_RED);
         this.getLayer().clearDepthBuffer();
-        this.getLayer().setRelativeBrushMask(sprites.getBrushTexture());
+        this.getLayer().setRelativeBrushMask(this.sprites.getBrushTexture());
 
-        for (int dy = 0; dy < 256; dy++) {
+        for (int dy = -BACK_VIEW; dy <= FORWARD_VIEW; dy++) {
             getLayer().setDrawDepth(dy);
             for (int dx = 0; dx < 10; dx++) {
                 for (int dz = 0; dz < mapping.length; dz++) {
-                    drawBlock(dx, dy, dz);
+                    drawBlock(facing, new IntVector3(dx, dy, dz));
                 }
             }
             if (!getLayer().hasMoreDepth()) {
@@ -85,24 +85,36 @@ public class TestFrameMap extends MapDisplay {
         CommonTagCompound nbt = ItemUtil.getMetaTag(this.getMapItem());
         int mdx = nbt.getValue("px", 0);
         int mdz = nbt.getValue("pz", 0);
-        //mdx += event.getKey().dx();
-        //mdz += event.getKey().dy();
+        BlockFace facing = nbt.getValue("facing", BlockFace.NORTH_EAST);
+
         if (event.getKey() == Key.UP) {
+            BlockFace facing_fwd = facing;            
             mdx += facing_fwd.getModX();
             mdz += facing_fwd.getModZ();
         } else if (event.getKey() == Key.RIGHT) {
+            BlockFace facing_rgt = FaceUtil.rotate(facing, 2);
             mdx += facing_rgt.getModX();
             mdz += facing_rgt.getModZ();
         } else if (event.getKey() == Key.DOWN) {
+            BlockFace facing_bwd = FaceUtil.rotate(facing, 4);
             mdx += facing_bwd.getModX();
             mdz += facing_bwd.getModZ();
         } else if (event.getKey() == Key.LEFT) {
+            BlockFace facing_lft = FaceUtil.rotate(facing, 6);
             mdx += facing_lft.getModX();
             mdz += facing_lft.getModZ();
         }
-        
+
+        if (event.getKey() == Key.ENTER) {
+            facing = FaceUtil.rotate(facing, 2);
+        } else if (event.getKey() == Key.BACK) {
+            mdx ^= 0x1;
+        }
+
         nbt.putValue("px", mdx);
         nbt.putValue("pz", mdz);
+        nbt.putValue("facing", facing.name());
+
         this.setMapItem(this.getMapItem());
         this.render();
     }
@@ -111,51 +123,21 @@ public class TestFrameMap extends MapDisplay {
     public void onAttached() {
         this.setSessionMode(MapSessionMode.VIEWING);
         this.setReceiveInputWhenHolding(true);
-        
-        this.sprites = new IsometricBlockSprites();
-        
         this.render();
     }
 
-    public void drawBlock(int px, int py, int pz) {
-        // Out of range on the map
-        if (pz < 0 || pz >= mapping.length) {
-            return;
+    public void drawBlock(BlockFace facing, IntVector3 p) {
+        IntVector3 b = screenToBlock(facing, p);
+        if (b != null) {
+            int draw_x = ((p.x - 1) * BLOCK_SIZE)/2;
+            int draw_y = mapping[p.z];
+            drawBlock(b, draw_x, draw_y);
         }
-
-        // Checks whether the tile coordinates are valid
-        if (MathUtil.floorMod((px * 3) + (py * 2) + (-pz * 1), 6) != 4) {
-            return;
-        }
-
-        int pzl = (pz + ((py + 4) % 6)) / 3;
-
-        int dx = ((px + (py & 0x1)) >> 1) + -(pzl >> 1);
-        int dy = -pzl - (py & ~0x1);
-        int dz = (dx + -dy) - py;
-
-        // repeating pattern of 6, increasing every loop
-        // 0, 0, 0, 0, 1, 1 ... 2, 2, 2, 2, 3, 3 ... etc.
-
-        int v = 6 * (py / 6);
-        int n = (v) / 3 + (py - v) / 4;
-
-        //System.out.println("dy " + py + "  " + n);
-
-        dx += n;
-        dy += 2 * n;
-        dz += -n;
-        
-        int draw_x = ((px - 1) * BLOCK_SIZE)/2;
-        int draw_y = mapping[pz];
-        
-        drawBlock(dx, dy, dz, draw_x, draw_y);
     }
 
-    public void drawBlock(int dx, int dy, int dz, int draw_x, int draw_y) {        
-        Block block = this.startBlock.getRelative(dx, dy, dz);
+    public void drawBlock(IntVector3 d, int draw_x, int draw_y) {        
+        Block block = this.startBlock.getRelative(d.x, d.y, d.z);
         MapTexture sprite = this.sprites.getSprite(block);
-
         getLayer().draw(sprite, draw_x, draw_y);
     }
 
@@ -188,4 +170,48 @@ public class TestFrameMap extends MapDisplay {
         getLayer(1).drawModel(resources.getModel("block/repeater_on_4tick"), transform);
         */
     }
+
+    public static IntVector3 screenToBlock(BlockFace facing, IntVector3 p) {
+        // Out of range on the map
+        if (p.z < 0 || p.z >= mapping.length) {
+            return null;
+        }
+
+        // Checks whether the tile coordinates are valid
+        if (MathUtil.floorMod((p.x * 3) + (p.y * 2) + (-p.z * 1), 6) != 4) {
+            return null;
+        }
+
+        int px_div2 = p.x / 2;
+        int py_div3 = MathUtil.floorDiv(p.y, 3);
+        int pz_div3 = p.z / 3;
+
+        int dxz_fact;
+        if ((p.x & 0x1) == 0x1) {
+            dxz_fact = (p.z + 2) / 6;            
+        } else {
+            dxz_fact = (p.z + 5) / 6;
+        }
+
+        int dx = py_div3 + px_div2 - dxz_fact;
+        int dy = -pz_div3 - py_div3;
+        int dz = dx - dy - p.y;
+
+        // Move to center block
+        dx += 1;
+        dz -= 3;
+
+        if (facing == BlockFace.NORTH_EAST) {
+            return new IntVector3(dx, dy, dz);
+        } else if (facing == BlockFace.SOUTH_WEST) {
+            return new IntVector3(-dx, dy, -dz);
+        } else if (facing == BlockFace.NORTH_WEST) {
+            return new IntVector3(dz, dy, -dx);
+        } else if (facing == BlockFace.SOUTH_EAST) {
+            return new IntVector3(-dz, dy, dx);
+        } else {
+            return null;
+        }
+    }
+
 }

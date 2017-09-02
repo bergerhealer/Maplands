@@ -4,7 +4,7 @@
 
   <groupId>com.bergerkiller.bukkit</groupId>
   <artifactId>Maplands</artifactId>
-  <version>0.2-SNAPSHOT</version>
+  <version>0.2</version>
   <packaging>jar</packaging>
 
   <name>Maplands</name>
@@ -12,8 +12,9 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.serverversion>1.12-R0.1</project.serverversion>
+    <project.serverversion>1.12.1-R0.1</project.serverversion>
     <project.bkcversion>1.12.1-v2-SNAPSHOT</project.bkcversion>
+    <junit.version>4.11</junit.version>
   </properties>
 
   <repositories>
@@ -33,10 +34,22 @@
   <dependencies>
     <dependency>
       <groupId>org.bukkit</groupId>
-        <artifactId>bukkit</artifactId>
-        <version>${project.serverversion}-SNAPSHOT</version>
+      <artifactId>bukkit</artifactId>
+      <version>${project.serverversion}-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
+
+    <!-- SpigotMC is only used when testing -->
+    <!--
+    <dependency>
+      <groupId>org.spigotmc</groupId>
+      <artifactId>spigot</artifactId>
+      <version>${project.serverversion}-SNAPSHOT</version>
+      <systemPath>../BKCommonLib/lib/org/spigotmc/spigot/1.12.1-R0.1-SNAPSHOT/spigot-1.12.1-R0.1-SNAPSHOT.jar</systemPath>
+      <scope>system</scope>
+    </dependency>
+    -->
+
     <dependency>
       <groupId>com.bergerkiller.bukkit</groupId>
       <artifactId>BKCommonLib</artifactId>
@@ -47,6 +60,13 @@
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>3.8.1</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>${junit.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -77,14 +97,15 @@
 	  <plugin>
 	    <groupId>org.apache.maven.plugins</groupId>
 		<artifactId>maven-compiler-plugin</artifactId>
-		<version>2.4</version>
+		<version>3.0</version>
 		<configuration>
-		  <source>1.7</source>
-		  <target>1.7</target>
+		  <source>1.8</source>
+		  <target>1.8</target>
 		  <showWarnings>true</showWarnings>
 		  <showDeprecation>true</showDeprecation>
 		</configuration>
       </plugin>
+
     </plugins>
   </build>
 </project>

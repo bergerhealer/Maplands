@@ -6,16 +6,27 @@ import org.bukkit.inventory.ItemStack;
 
 import com.bergerkiller.bukkit.common.Common;
 import com.bergerkiller.bukkit.common.PluginBase;
+import com.bergerkiller.bukkit.common.config.FileConfiguration;
 import com.bergerkiller.bukkit.common.map.MapDisplay;
 import com.bergerkiller.bukkit.common.map.MapResourcePack;
 
 public class Maplands extends PluginBase {
     public static Maplands plugin;
-    
+    public MapResourcePack resourcePack;
+
 	@Override
 	public void enable() {
 	    plugin = this;
+
 	    MapResourcePack.VANILLA.load();
+
+	    FileConfiguration config = new FileConfiguration(this);
+	    config.load();
+	    config.setHeader("resourcePack", "Specifies a resource pack to use when rendering blocks");
+	    config.addHeader("resourcePack", "When left empty the Vanilla Minecraft look is displayed");
+	    this.resourcePack = new MapResourcePack(config.get("resourcePack", ""));
+	    config.save();
+
 	    this.loadPermissions(Permission.class);
 	}
 

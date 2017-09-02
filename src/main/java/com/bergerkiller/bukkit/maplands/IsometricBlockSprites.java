@@ -1,26 +1,38 @@
 package com.bergerkiller.bukkit.maplands;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
+import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 
-import com.bergerkiller.bukkit.common.map.MapResourcePack;
 import com.bergerkiller.bukkit.common.map.MapTexture;
 import com.bergerkiller.bukkit.common.map.util.Matrix4f;
 import com.bergerkiller.bukkit.common.map.util.Vector3f;
+import com.bergerkiller.bukkit.common.utils.FaceUtil;
+import com.bergerkiller.bukkit.common.utils.MathUtil;
+import com.bergerkiller.bukkit.common.wrappers.BlockData;
 import com.bergerkiller.bukkit.common.wrappers.BlockRenderOptions;
 
 /**
  * Renders and caches isometric block sprites
  */
 public class IsometricBlockSprites {
-    private MapResourcePack resources;
     private final HashMap<BlockRenderOptions, MapTexture> spriteCache = new HashMap<BlockRenderOptions, MapTexture>();
     private final MapTexture brushTexture;
+    private final BlockFace facing;
+    private final int zoom;
+    public final int width;
+    public final int height;
 
-    public IsometricBlockSprites() {
-        this.resources = MapResourcePack.VANILLA;
-        this.brushTexture = MapTexture.loadPluginResource(Maplands.plugin, "com/bergerkiller/bukkit/maplands/mask2.png");
+    private IsometricBlockSprites(BlockFace facing, int zoom) {
+        this.facing = facing;
+        this.zoom = zoom;
+        this.width = MathUtil.ceil(128.0 / zoom);
+        this.height = MathUtil.ceil(4.0 * 128.0 / ((double) zoom * 3.0));
+        this.brushTexture = MapTexture.loadResource(IsometricBlockSprites.class, "/com/bergerkiller/bukkit/maplands/mask2.png");
     }
 
     /**
@@ -32,6 +44,34 @@ public class IsometricBlockSprites {
         return this.brushTexture;
     }
 
+    public MapTexture getSprite(Material material) {
+        return getSprite(BlockData.fromMaterial(material).getDefaultRenderOptions());
+    }
+
+    public MapTexture getSprite(BlockRenderOptions options) {
+        MapTexture result = spriteCache.get(options);
+        if (result == null) {
+            result = MapTexture.createEmpty(this.width, this.height);
+
+            Matrix4f transform = new Matrix4f();
+
+            transform.translate(2.62f, 0, 8.25f);
+            transform.scale(1.61f);
+
+            transform.translate(8, 8, 8);
+            transform.rotateX(-51.2f);
+            transform.rotateY(FaceUtil.faceToYaw(this.facing) - 90);
+            transform.translate(-8, -8, -8);
+
+            //map.fill(MapColorPalette.COLOR_RED);
+            result.setLightOptions(0.2f, 0.8f, new Vector3f(-1.0f, 1.0f, -1.0f));
+            result.drawModel(Maplands.plugin.resourcePack.getBlockModel(options), transform);
+
+            spriteCache.put(options, result);
+        }
+        return result;
+    }
+    
     /**
      * Gets the texture sprite for a particular block
      * 
@@ -39,31 +79,22 @@ public class IsometricBlockSprites {
      * @return sprite texture
      */
     public MapTexture getSprite(Block block) {
-        BlockRenderOptions options = BlockRenderOptions.fromBlock(block);
-        MapTexture result = spriteCache.get(options);
-        if (result == null) {
-            result = MapTexture.createEmpty(32, 43);
+        return getSprite(BlockRenderOptions.fromBlock(block));
+    }
 
-            Matrix4f transform = new Matrix4f();
-            //transform.translate(result.getWidth(), 0.0f, result.getWidth() - 1);
-            //transform.scale(1.45f, 1.0f, 1.71f);
-            
-            transform.translate(result.getWidth(), 0.0f, result.getWidth() - 2);
-            transform.scale(1.45f, 1.0f, 1.71f);
-            
-            transform.rotateX(-45.0f);
-            transform.rotateY(225.0f);
+    // Static caches for different zoom levels and different yaw rotations
 
-            // Rotate 180 because of view (was rotated around 225)
-            transform.rotateOrigin(new Vector3f(8,8,8), new Vector3f(0, 180, 0));
+    private static List<IsometricBlockSprites> instances = new ArrayList<IsometricBlockSprites>();
 
-            //map.fill(MapColorPalette.COLOR_RED);
-            result.setLightOptions(0.2f, 0.8f, new Vector3f(-1.0f, 1.0f, -1.0f));
-            result.drawModel(this.resources.getBlockModel(options), transform);
-
-            spriteCache.put(options, result);
+    public static IsometricBlockSprites getSprites(BlockFace facing, int zoom) {
+        for (IsometricBlockSprites sprites : instances) {
+            if (sprites.facing == facing && sprites.zoom == zoom) {
+                return sprites;
+            }
         }
-        return result;
+        IsometricBlockSprites sprites = new IsometricBlockSprites(facing, zoom);
+        instances.add(sprites);
+        return sprites;
     }
 
 }
