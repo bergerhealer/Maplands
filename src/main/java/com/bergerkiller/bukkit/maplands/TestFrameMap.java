@@ -32,7 +32,14 @@ public class TestFrameMap extends MapDisplay {
             64,    75,     86,
             96,    107,    118
     };
-    
+
+    @Override
+    public void onAttached() {
+        this.setSessionMode(MapSessionMode.VIEWING); // VIEWING for debug, FOREVER for release
+        this.setReceiveInputWhenHolding(true);
+        this.render();
+    }
+
     private void render() {
         CommonTagCompound nbt = ItemUtil.getMetaTag(this.getMapItem());
         int px = nbt.getValue("px", 0);
@@ -119,13 +126,6 @@ public class TestFrameMap extends MapDisplay {
         this.render();
     }
 
-    @Override
-    public void onAttached() {
-        this.setSessionMode(MapSessionMode.VIEWING);
-        this.setReceiveInputWhenHolding(true);
-        this.render();
-    }
-
     public void drawBlock(BlockFace facing, IntVector3 p) {
         IntVector3 b = screenToBlock(facing, p);
         if (b != null) {
@@ -135,10 +135,14 @@ public class TestFrameMap extends MapDisplay {
         }
     }
 
-    public void drawBlock(IntVector3 d, int draw_x, int draw_y) {        
-        Block block = this.startBlock.getRelative(d.x, d.y, d.z);
-        MapTexture sprite = this.sprites.getSprite(block);
-        getLayer().draw(sprite, draw_x, draw_y);
+    public void drawBlock(IntVector3 d, int draw_x, int draw_y) {
+        int x = this.startBlock.getX() + d.x;
+        int y = this.startBlock.getY() + d.y;
+        int z = this.startBlock.getZ() + d.z;
+        if (y >= 0 && y < 256) {
+            MapTexture sprite = this.sprites.getSprite(this.startBlock.getWorld(), x, y, z);
+            getLayer().draw(sprite, draw_x, draw_y);
+        }
     }
 
     @Override

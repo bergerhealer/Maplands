@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 
@@ -80,6 +81,10 @@ public class IsometricBlockSprites {
      */
     public MapTexture getSprite(Block block) {
         return getSprite(BlockRenderOptions.fromBlock(block));
+    }
+
+    public MapTexture getSprite(World world, int x, int y, int z) {
+        return getSprite(BlockRenderOptions.fromBlock(world, x, y, z));
     }
 
     // Static caches for different zoom levels and different yaw rotations
