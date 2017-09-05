@@ -46,7 +46,7 @@ public class TestFrameMap extends MapDisplay {
         int py = nbt.getValue("py", 0);
         int pz = nbt.getValue("pz", 0);
         BlockFace facing = nbt.getValue("facing", BlockFace.NORTH_EAST);
-        int zoom = nbt.getValue("zoom", 4);
+        ZoomLevel zoom = nbt.getValue("zoomLevel", ZoomLevel.ZOOM4);
         String worldName = nbt.getValue("mapWorld", "");
         if (worldName.length() == 0) {
             Player player = this.getOwners().get(0);
@@ -129,9 +129,9 @@ public class TestFrameMap extends MapDisplay {
     public void drawBlock(BlockFace facing, IntVector3 p) {
         IntVector3 b = screenToBlock(facing, p);
         if (b != null) {
-            int draw_x = ((p.x - 1) * BLOCK_SIZE)/2;
-            int draw_y = mapping[p.z];
-            drawBlock(b, draw_x, draw_y);
+            int draw_x = sprites.getZoom().getDrawX(p.x); //((p.x - 1) * BLOCK_SIZE)/2;
+            int draw_z = sprites.getZoom().getDrawZ(p.z); //mapping[p.z];
+            drawBlock(b, draw_x, draw_z);
         }
     }
 

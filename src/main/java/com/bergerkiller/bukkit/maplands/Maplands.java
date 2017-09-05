@@ -12,7 +12,15 @@ import com.bergerkiller.bukkit.common.map.MapResourcePack;
 
 public class Maplands extends PluginBase {
     public static Maplands plugin;
-    public MapResourcePack resourcePack;
+    private static MapResourcePack resourcePack;
+
+    public static MapResourcePack getResourcePack() {
+        if (resourcePack == null) {
+            resourcePack = MapResourcePack.VANILLA; // fallback under test
+            MapResourcePack.VANILLA.load(); // test! Make sure it is loaded.
+        }
+        return resourcePack;
+    }
 
 	@Override
 	public void enable() {
@@ -24,7 +32,7 @@ public class Maplands extends PluginBase {
 	    config.load();
 	    config.setHeader("resourcePack", "Specifies a resource pack to use when rendering blocks");
 	    config.addHeader("resourcePack", "When left empty the Vanilla Minecraft look is displayed");
-	    this.resourcePack = new MapResourcePack(config.get("resourcePack", ""));
+	    resourcePack = new MapResourcePack(config.get("resourcePack", ""));
 	    config.save();
 
 	    this.loadPermissions(Permission.class);
@@ -33,6 +41,7 @@ public class Maplands extends PluginBase {
 	@Override
 	public void disable() {
 	    plugin = null;
+	    resourcePack = null;
 	}
 
     @Override
