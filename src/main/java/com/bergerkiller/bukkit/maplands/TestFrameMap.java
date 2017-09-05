@@ -20,18 +20,9 @@ import com.bergerkiller.bukkit.common.utils.MathUtil;
 
 public class TestFrameMap extends MapDisplay {
     private IsometricBlockSprites sprites;
-    private final int BLOCK_SIZE = 32;
     private Block startBlock;
     private static final int BACK_VIEW = 100; // amount of layers visible 'behind' the current block
     private static final int FORWARD_VIEW = 200; // amount of layers visible 'after' the current block
-
-    static final int[] mapping = {
-            -32,   -21,   -10,
-            0,     11,     22,
-            32,    43,     54,
-            64,    75,     86,
-            96,    107,    118
-    };
 
     @Override
     public void onAttached() {
@@ -46,7 +37,7 @@ public class TestFrameMap extends MapDisplay {
         int py = nbt.getValue("py", 0);
         int pz = nbt.getValue("pz", 0);
         BlockFace facing = nbt.getValue("facing", BlockFace.NORTH_EAST);
-        ZoomLevel zoom = nbt.getValue("zoomLevel", ZoomLevel.ZOOM4);
+        ZoomLevel zoom = ZoomLevel.ZOOM4; //nbt.getValue("zoomLevel", ZoomLevel.ZOOM4);
         String worldName = nbt.getValue("mapWorld", "");
         if (worldName.length() == 0) {
             Player player = this.getOwners().get(0);
@@ -74,10 +65,12 @@ public class TestFrameMap extends MapDisplay {
         this.getLayer().clearDepthBuffer();
         this.getLayer().setRelativeBrushMask(this.sprites.getBrushTexture());
 
+        int cols = this.sprites.getZoom().getColumns();
+        int rows = this.sprites.getZoom().getRows();
         for (int dy = -BACK_VIEW; dy <= FORWARD_VIEW; dy++) {
             getLayer().setDrawDepth(dy);
-            for (int dx = 0; dx < 10; dx++) {
-                for (int dz = 0; dz < mapping.length; dz++) {
+            for (int dx = 0; dx < cols; dx++) {
+                for (int dz = 0; dz < rows; dz++) {
                     drawBlock(facing, new IntVector3(dx, dy, dz));
                 }
             }
@@ -176,11 +169,6 @@ public class TestFrameMap extends MapDisplay {
     }
 
     public static IntVector3 screenToBlock(BlockFace facing, IntVector3 p) {
-        // Out of range on the map
-        if (p.z < 0 || p.z >= mapping.length) {
-            return null;
-        }
-
         // Checks whether the tile coordinates are valid
         if (MathUtil.floorMod((p.x * 3) + (p.y * 2) + (-p.z * 1), 6) != 4) {
             return null;

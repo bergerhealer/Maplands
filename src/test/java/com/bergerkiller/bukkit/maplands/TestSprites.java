@@ -20,9 +20,23 @@ public class TestSprites {
 
     @Ignore
     @Test
+    public void testZoomMask() {
+        ZoomLevel zoom = ZoomLevel.ZOOM2;
+        MapTexture map = MapTexture.createEmpty(200, 200);
+
+        map.draw(zoom.getMask(), zoom.getDrawX(2), zoom.getDrawZ(3), MapColorPalette.COLOR_BLUE);
+        map.draw(zoom.getMask(), zoom.getDrawX(1), zoom.getDrawZ(6) + 1, MapColorPalette.COLOR_RED);
+        map.draw(zoom.getMask(), zoom.getDrawX(3), zoom.getDrawZ(6) + 1, MapColorPalette.COLOR_GREEN);
+        map.draw(zoom.getMask(), zoom.getDrawX(2), zoom.getDrawZ(9) + 2, MapColorPalette.COLOR_YELLOW);
+
+        MapDebugWindow.showMapForever(map, 4);
+    }
+
+    @Ignore
+    @Test
     public void testSprites() {
         MapTexture map = MapTexture.createEmpty(200, 200);
-        ZoomLevel zoom = ZoomLevel.ZOOM4;
+        ZoomLevel zoom = ZoomLevel.ZOOM2;
         sprites = new IsometricBlockSprites[] {
                 IsometricBlockSprites.getSprites(BlockFace.NORTH_EAST, zoom),
                 IsometricBlockSprites.getSprites(BlockFace.NORTH_WEST, zoom),

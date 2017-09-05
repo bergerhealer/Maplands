@@ -1,9 +1,8 @@
 package com.bergerkiller.bukkit.maplands;
 
-import java.util.Locale;
-
 import org.bukkit.block.BlockFace;
 
+import com.bergerkiller.bukkit.common.map.MapColorPalette;
 import com.bergerkiller.bukkit.common.map.MapTexture;
 import com.bergerkiller.bukkit.common.map.util.Matrix4f;
 import com.bergerkiller.bukkit.common.utils.FaceUtil;
@@ -13,33 +12,45 @@ import com.bergerkiller.bukkit.common.utils.MathUtil;
  * A map zoom level that can be used
  */
 public enum ZoomLevel {
-    ZOOM4(32, 43, 2.62f, 8.25f, 1.61f, -51.2f);
+    ZOOM2(16, 21, 0.805f,   1.0f, 3.0f,    -51.2f),
+    ZOOM4(32, 43, 1.61f,    2.62f, 8.24f,   -51.2f);
 
     private final int width, height;
     private final int offset_x, offset_z;
+    private final int cols, rows;
     private final float dx, dz;
     private final float scale;
     private final float pitch;
     private final MapTexture mask;
 
-    private ZoomLevel(int width, int height, float dx, float dz, float scale, float pitch) {
+    private ZoomLevel(int width, int height, float scale, float dx, float dz, float pitch) {
         this.width = width;
         this.height = height;
         this.offset_x = -(width >> 1);
         this.offset_z = -width;
+        this.cols = 2 + MathUtil.ceil(128.0 / (double) width * 2.0);
+        this.rows = 3 + MathUtil.ceil(128.0 / (double) width * 3.0);
         this.dx = dx;
         this.dz = dz;
         this.scale = scale;
         this.pitch = pitch;
-        this.mask = MapTexture.loadResource(ZoomLevel.class, "/com/bergerkiller/bukkit/maplands/textures/" + this.name().toLowerCase(Locale.ENGLISH) + "_mask.png");
+        this.mask = createMask(width, height);
     }
 
-    public int getWidth() {
+    public final int getWidth() {
         return this.width;
     }
 
-    public int getHeight() {
+    public final int getHeight() {
         return this.height;
+    }
+
+    public final int getColumns() {
+        return this.cols;
+    }
+
+    public final int getRows() {
+        return this.rows;
     }
 
     /**
@@ -81,5 +92,38 @@ public enum ZoomLevel {
         transform.translate(-8, -8, -8);
 
         return transform;
+    }
+
+    private static MapTexture createMask(int width, int height) {
+        // This creates a tileable block-shaped mask (looks like a hexagon)
+        MapTexture mask = MapTexture.createEmpty(width, height);
+        mask.fill(MapColorPalette.COLOR_WHITE);
+
+        int half_width = width >> 1;
+        int edge_y = height - width - 1;
+
+        for (int x = 0; x < width; x++) {
+            int x1, x2;
+            if (x < half_width) {
+                x1 = width - x - 1;
+                x2 = half_width - x - 1;
+            } else {
+                x1 = x;
+                x2 = width - x + half_width - 1;
+            }
+
+            float a = (float) (x1) / (float) (half_width);
+            int f1 = MathUtil.ceil((float) edge_y * a) - edge_y - 1;
+            for (int y = 0; y <= f1; y++) {
+                mask.writePixel(x, y, MapColorPalette.COLOR_TRANSPARENT);
+            }
+
+            int f2 = edge_y - f1;
+            for (int y = 0; y <= f2; y++) {
+                mask.writePixel(x2, height - y, MapColorPalette.COLOR_TRANSPARENT);
+            }
+        }
+
+        return mask;
     }
 }
