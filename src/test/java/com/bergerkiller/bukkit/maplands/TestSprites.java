@@ -18,7 +18,7 @@ public class TestSprites {
         CommonUtil.bootstrap();
     }
 
-    //@Ignore
+    @Ignore
     @Test
     public void testSprites() {
         MapTexture map = MapTexture.createEmpty(200, 200);
