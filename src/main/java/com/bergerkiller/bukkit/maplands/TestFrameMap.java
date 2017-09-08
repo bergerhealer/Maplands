@@ -65,8 +65,8 @@ public class TestFrameMap extends MapDisplay {
         this.getLayer().clearDepthBuffer();
         this.getLayer().setRelativeBrushMask(this.sprites.getBrushTexture());
 
-        int cols = this.sprites.getZoom().getColumns();
-        int rows = this.sprites.getZoom().getRows();
+        int cols = (this.getWidth() / 128) * this.sprites.getZoom().getColumns();
+        int rows = (this.getHeight() / 128) * this.sprites.getZoom().getRows();
         for (int dy = -BACK_VIEW; dy <= FORWARD_VIEW; dy++) {
             getLayer().setDrawDepth(dy);
             for (int dx = 0; dx < cols; dx++) {
