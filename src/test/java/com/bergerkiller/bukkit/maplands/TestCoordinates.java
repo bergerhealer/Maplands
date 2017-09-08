@@ -16,8 +16,8 @@ public class TestCoordinates {
             for (int dx = 0; dx < 10; dx++) {
                 for (int dz = 0; dz < 15; dz++) {
                     IntVector3 in = new IntVector3(dx, dy, dz);
-                    IntVector3 a = TestFrameMap.screenToBlock(BlockFace.NORTH_EAST, in);
-                    IntVector3 b = TestFrameMap.screenToBlock(BlockFace.NORTH_EAST, in);
+                    IntVector3 a = TestFrameMap.screenTileToBlock(BlockFace.NORTH_EAST, in);
+                    IntVector3 b = TestFrameMap.screenTileToBlock(BlockFace.NORTH_EAST, in);
                     if (!LogicUtil.bothNullOrEqual(a, b)) {
                         System.out.println("FAIL " + in + " != " + a + " but was " + b);
                     }
@@ -31,7 +31,7 @@ public class TestCoordinates {
     public void testNegativePY() {
         for (int dy = 8; dy >= -12; dy -= 3) {
             IntVector3 p = new IntVector3(0, dy, 0);
-            System.out.println(p + " = " + TestFrameMap.screenToBlock(BlockFace.NORTH_EAST, p));
+            System.out.println(p + " = " + TestFrameMap.screenTileToBlock(BlockFace.NORTH_EAST, p));
         }
     }
 }

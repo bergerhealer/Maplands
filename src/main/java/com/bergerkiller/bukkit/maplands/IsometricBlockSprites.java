@@ -25,6 +25,7 @@ public class IsometricBlockSprites {
     private final Matrix4f transform;
     public final int width;
     public final int height;
+    public final MapTexture AIR;
 
     private IsometricBlockSprites(BlockFace facing, ZoomLevel zoom) {
         this.facing = facing;
@@ -32,6 +33,7 @@ public class IsometricBlockSprites {
         this.width = zoom.getWidth();
         this.height = zoom.getHeight();
         this.transform = zoom.getTransform(facing);
+        this.AIR = this.getSprite(Material.AIR);
     }
 
     /**
