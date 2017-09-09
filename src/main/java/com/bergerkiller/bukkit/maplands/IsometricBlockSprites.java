@@ -71,7 +71,7 @@ public class IsometricBlockSprites {
         }
         return result;
     }
-    
+
     /**
      * Gets the texture sprite for a particular block
      * 
@@ -79,7 +79,7 @@ public class IsometricBlockSprites {
      * @return sprite texture
      */
     public MapTexture getSprite(Block block) {
-        return getSprite(BlockRenderOptions.fromBlock(block));
+        return getSprite(block.getWorld(), block.getX(), block.getY(), block.getZ());
     }
 
     public MapTexture getSprite(World world, int x, int y, int z) {
