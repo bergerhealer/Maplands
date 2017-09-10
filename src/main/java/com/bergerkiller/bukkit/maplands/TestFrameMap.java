@@ -1,5 +1,7 @@
 package com.bergerkiller.bukkit.maplands;
 
+import java.util.Arrays;
+
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -17,7 +19,6 @@ import com.bergerkiller.bukkit.common.map.MapPlayerInput.Key;
 import com.bergerkiller.bukkit.common.utils.FaceUtil;
 import com.bergerkiller.bukkit.common.utils.MathUtil;
 import com.bergerkiller.bukkit.common.utils.WorldUtil;
-import com.bergerkiller.bukkit.common.wrappers.LongHashSet;
 
 public class TestFrameMap extends MapDisplay {
     private IsometricBlockSprites sprites;
@@ -29,13 +30,14 @@ public class TestFrameMap extends MapDisplay {
     private int currentRenderY;
     private boolean forwardRenderNeeded;
     private int tile_offset_x, tile_offset_z;
+    private int minCols, maxCols, minRows, maxRows;
     private boolean enableLight = false;
-    private final LongHashSet drawnTiles = new LongHashSet();
+    private boolean[] drawnTiles; //TODO: Bitset may be faster/more memory efficient?
     private MenuButton[] menuButtons;
     private MapTexture menu_bg;
     int rendertime = 0;
     private static final int MENU_DURATION = 200; // amount of ticks menu is kept open while idle
-    private static final int VIEW_RANGE = 300; // amount of layers visible backwards and forwards the current block
+    private static final int VIEW_RANGE = 512; // amount of layers visible backwards and forwards the current block
 
     @Override
     public void onAttached() {
@@ -66,12 +68,12 @@ public class TestFrameMap extends MapDisplay {
             button.setDisplay(this);
         }
 
-        this.setSessionMode(MapSessionMode.VIEWING); // VIEWING for debug, FOREVER for release
+        this.setSessionMode(MapSessionMode.FOREVER); // VIEWING for debug, FOREVER for release
         this.setReceiveInputWhenHolding(true);
-        this.render();
+        this.render(true);
     }
 
-    private void render() {
+    private void render(boolean clear) {
         int px = properties.get("px", 0);
         int py = properties.get("py", 0);
         int pz = properties.get("pz", 0);
@@ -94,8 +96,8 @@ public class TestFrameMap extends MapDisplay {
 
         // Get the correct sprites
         this.sprites = IsometricBlockSprites.getSprites(facing, this.zoom);
-        
-        testSprite = MapTexture.createEmpty(zoom.getWidth(), zoom.getHeight());
+
+        this.testSprite = MapTexture.createEmpty(zoom.getWidth(), zoom.getHeight());
 
         // Start coordinates for the view
         this.startBlock = world.getBlockAt(px, py, pz);
@@ -103,12 +105,31 @@ public class TestFrameMap extends MapDisplay {
         this.getLayer().setRelativeBrushMask(null);
         //this.getLayer().setDrawDepth(-VIEW_RANGE);
         //this.getLayer().fill(MapColorPalette.COLOR_RED);
-        this.getLayer().clearDepthBuffer();
+        if (clear) {
+            this.getLayer().clearDepthBuffer();
+        }
         this.getLayer().setRelativeBrushMask(this.sprites.getBrushTexture());
 
         this.currentRenderY = -VIEW_RANGE;
         this.forwardRenderNeeded = true;
-        this.drawnTiles.clear();
+
+        int nrColumns = this.sprites.getZoom().getNumberOfColumns(this.getWidth());
+        int nrRows = this.sprites.getZoom().getNumberOfRows(this.getHeight());
+        this.minCols = -nrColumns;
+        this.maxCols = nrColumns;
+        this.minRows = -nrRows;
+        this.maxRows = nrRows + 3;
+
+        // Clear drawn tiles state
+        if (clear) {
+            int len = (this.maxRows - this.minRows + 1) * (this.maxCols - this.minCols + 1);
+            if (this.drawnTiles == null || len != this.drawnTiles.length) {
+                this.drawnTiles = new boolean[len];
+            } else {
+                Arrays.fill(this.drawnTiles, false);
+            }
+        }
+
         rendertime = 0;
     }
 
@@ -137,52 +158,89 @@ public class TestFrameMap extends MapDisplay {
             this.showMenu();
         } else {
             // No menu is shown. Simple navigation.
-            int mdx = properties.get("px", 0);
-            int mdz = properties.get("pz", 0);
-            BlockFace facing = properties.get("facing", BlockFace.NORTH_EAST);
-
-            int mx = zoom.getScreenX(2) - zoom.getScreenX(0);
-            int mz = zoom.getScreenZ(2) - zoom.getScreenZ(0);
-
             if (event.getKey() == Key.UP) {
-                BlockFace facing_fwd = facing;            
-                mdx += facing_fwd.getModX();
-                mdz += facing_fwd.getModZ();
-                getLayer().movePixels(0, mz);
+                BlockFace facing_fwd = facing;
+                moveTiles(0, 2, facing_fwd);
             } else if (event.getKey() == Key.RIGHT) {
                 BlockFace facing_rgt = FaceUtil.rotate(facing, 2);
-                mdx += facing_rgt.getModX();
-                mdz += facing_rgt.getModZ();
-                getLayer().movePixels(-mx, 0);
+                moveTiles(-2, 0, facing_rgt);
             } else if (event.getKey() == Key.DOWN) {
                 BlockFace facing_bwd = FaceUtil.rotate(facing, 4);
-                mdx += facing_bwd.getModX();
-                mdz += facing_bwd.getModZ();
-                getLayer().movePixels(0, -mz);
+                moveTiles(0, -2, facing_bwd);
             } else if (event.getKey() == Key.LEFT) {
                 BlockFace facing_lft = FaceUtil.rotate(facing, 6);
-                mdx += facing_lft.getModX();
-                mdz += facing_lft.getModZ();
-                getLayer().movePixels(mx, 0);
+                moveTiles(2, 0, facing_lft);
             }
 
             if (event.getKey() == Key.ENTER) {
-                facing = FaceUtil.rotate(facing, 2);
+                //rotate(1);
+                this.render(true);
             }
-
-            properties.set("px", mdx);
-            properties.set("pz", mdz);
-            properties.set("facing", facing);
-
-            this.render();
         }
     }
 
-    public boolean drawBlock(IntVector3 p, boolean isRedraw) {
-        IntVector3 b = getBlockAtTile(p);
+    public void moveTiles(int dtx, int dtz, BlockFace blockChange) {
+        // Move all pixels
+        getLayer().movePixels(
+                zoom.getScreenX(dtx) - zoom.getScreenX(0),
+                zoom.getScreenZ(dtz) - zoom.getScreenZ(0)
+        );
+
+        // Transform the "have we drawn this tile?" buffer with the same movement
+        // Shorten the direction moved away from, since some of those blocks were only partially drawn
+        // They will have to be fully re-drawn to draw the cut-off portion
+        int fMinCols = this.minCols;
+        int fMaxCols = this.maxCols;
+        int fMinRows = this.minRows;
+        int fMaxRows = this.maxRows;
+        if (dtx > 0) {
+            fMinCols += dtx + 1;
+        } else if (dtx < 0) {
+            fMaxCols += dtx - 1;
+        }
+        if (dtz > 0) {
+            fMinRows += dtz + 5;
+        } else if (dtz < 0) {
+            fMaxRows += dtz - 5;
+        }
+        boolean[] newDrawnTiles = new boolean[this.drawnTiles.length];
+        int tileIdx = -1;
+        for (int y = this.minRows; y <= this.maxRows; y++) {
+            for (int x = this.minCols; x <= this.maxCols; x++) {
+                tileIdx++;
+                boolean value = this.drawnTiles[tileIdx];
+                int mx = x + dtx;
+                int mz = y + dtz;
+                if (mx >= fMinCols && mx <= fMaxCols && mz >= fMinRows && mz <= fMaxRows) {
+                    int index = tileIdx;
+                    index += dtz * (this.maxCols - this.minCols + 1) + dtx;
+                    newDrawnTiles[index] = value;
+                }
+            }
+        }
+        this.drawnTiles = newDrawnTiles;
+
+        // When moving up or down, the depth buffer values are incremented/decremented
+        if (dtz != 0) {
+            short[] buffer = this.getLayer().getDepthBuffer();
+            for (int i = 0; i < buffer.length; i++) {
+                if (buffer[i] != MapCanvas.MAX_DEPTH) {
+                    buffer[i] -= dtz;
+                }
+            }
+        }
+
+        // Re-render with the changed block position
+        properties.set("px", properties.get("px", 0) + blockChange.getModX());
+        properties.set("pz", properties.get("pz", 0) + blockChange.getModZ());
+        render(false);
+    }
+
+    public boolean drawBlock(int x, int y, int z, boolean isRedraw) {
+        IntVector3 b = getBlockAtTile(x, y, z);
         if (b != null) {
-            int draw_x = sprites.getZoom().getDrawX(p.x);
-            int draw_z = sprites.getZoom().getDrawZ(p.z);
+            int draw_x = sprites.getZoom().getDrawX(x);
+            int draw_z = sprites.getZoom().getDrawZ(z);
             return drawBlock(b, draw_x, draw_z, isRedraw);
         } else {
             return true;
@@ -278,14 +336,14 @@ public class TestFrameMap extends MapDisplay {
         }
         zoomLevelIdx = MathUtil.clamp(zoomLevelIdx + n, 0, values.length - 1);
         properties.set("zoom", values[zoomLevelIdx]);
-        this.render();
+        this.render(true);
     }
 
     public void rotate(int n) {
         BlockFace facing = properties.get("facing", BlockFace.NORTH_EAST);
         facing = FaceUtil.rotate(facing, n * 2);
         properties.set("facing", facing);
-        this.render();
+        this.render(true);
     }
 
     /**
@@ -316,28 +374,24 @@ public class TestFrameMap extends MapDisplay {
         if (tile == null) {
             return null;
         } else {
-            return getBlockAtTile(tile);
+            return getBlockAtTile(tile.x, tile.y, tile.z);
         }
     }
 
-    public IntVector3 getBlockAtTile(IntVector3 tile) {
-        return MapUtil.screenTileToBlock(this.facing, tile.add(this.tile_offset_x, 0, this.tile_offset_z));
+    public IntVector3 getBlockAtTile(int tx, int ty, int tz) {
+        return MapUtil.screenTileToBlock(this.facing, tx + this.tile_offset_x, ty, tz + this.tile_offset_z);
     }
 
     private void renderSlice(int y) {
-        int cols = ((this.getWidth() / 128) * this.sprites.getZoom().getColumns()) >> 1;
-        int rows = ((this.getHeight() / 128) * this.sprites.getZoom().getRows()) >> 1;
         getLayer().setDrawDepth(y);
-        for (int dx = -cols; dx <= (cols + 1); dx++) {
-            for (int dz = -rows; dz <= (rows + 3); dz++) {
-                if (drawnTiles.contains(dx, dz)) {
-                    // Fully covered. Skip rendering this tile!
-                    continue;
-                }
-                if (!drawBlock(new IntVector3(dx, y, dz), true)) {
+        int tileIdx = -1;
+        for (int dz = minRows; dz <= maxRows; dz++) {
+            for (int dx = minCols; dx <= maxCols; dx++) {
+                tileIdx++;
+                if (!this.drawnTiles[tileIdx] && !drawBlock(dx, y, dz, true)) {
+
                     // Fully covered. No longer render this tile!
-                    drawnTiles.add(dx, dz);
-                    continue;
+                    this.drawnTiles[tileIdx] = true;
                 }
             }
         }
@@ -367,33 +421,6 @@ public class TestFrameMap extends MapDisplay {
                 //System.out.println("RENDER TIME: " + rendertime);
             }
         }
-
-        //getLayer(1).clear();
-        
-        /*
-        Location loc = this.getOwners().get(0).getEyeLocation();
-
-        Matrix4f modeloffset = new Matrix4f();
-        modeloffset.set(new Vector3f(-8.0f, -8.0f, -8.0f));
-        
-        Matrix4f translation = new Matrix4f();
-        translation.set(4.0f, new Vector3f(64, 0, 70));
-
-        Matrix4f rotationPitch = new Matrix4f();
-        rotationPitch.rotateX(loc.getPitch() - 90.0f);
-
-        Matrix4f rotationYaw = new Matrix4f();
-        rotationYaw.rotateY(loc.getYaw());
-
-        Matrix4f transform = new Matrix4f();
-        transform.setIdentity();
-        transform.multiply(translation);
-        transform.multiply(rotationPitch);
-        transform.multiply(rotationYaw);
-        transform.multiply(modeloffset);
-        
-        getLayer(1).drawModel(resources.getModel("block/repeater_on_4tick"), transform);
-        */
     }
 
 }

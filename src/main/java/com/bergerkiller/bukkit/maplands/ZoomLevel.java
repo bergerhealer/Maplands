@@ -13,41 +13,32 @@ import com.bergerkiller.bukkit.common.utils.MathUtil;
  * A map zoom level that can be used
  */
 public enum ZoomLevel {
-    ZOOM8( 8,  11,  0.4f,  -51.2f),
-    ZOOM16(16, 21,  1.0f,  -51.2f),
-    ZOOM32(32, 43,  2.5f,  -51.2f),
-    ZOOM64(64, 86,  5.4f, -51.2f);
+    ZOOM4( 4,  0.00f,  19.8758f,  -70f),
+    ZOOM8( 8,  0.5f,   19.8758f,  -55f),
+    ZOOM16(16, 2.5f,   19.8758f,  -51.2f),
+    ZOOM32(32, 5.4f,   19.8758f,  -50.4f),
+    ZOOM64(64, 12.8f,  19.3f,  -51.2f);
 
     public static final ZoomLevel DEFAULT = ZOOM32;
 
     private final int width, height;
+    private final int step_x, step_z;
     private final int screen_z_base;
     private final int draw_dx, draw_dz;
-    private final int cols, rows;
-    private final float dx, dz;
-    private final float scale;
+    private final float dz, sz;
     private final float pitch;
     private final MapTexture mask;
 
-    private ZoomLevel(int width, int height, float d, float pitch) {
-        this(width, height, d, 3.0f * d, pitch);
-    }
-    
-    private ZoomLevel(int width, int height, float dx, float dz, float pitch) {
-        this(width, height, (float) width / 19.8758f, dx, dz, pitch);
-    }
-
-    private ZoomLevel(int width, int height, float scale, float dx, float dz, float pitch) {
-        this.width = width;
-        this.height = height;
-        this.draw_dx = -(width >> 1);
-        this.draw_dz = -(height >> 1);
+    private ZoomLevel(int width, float dz, float sz, float pitch) {
+        this.step_x = (width >> 1);
+        this.step_z = MathUtil.floor((double) width / 3.0);
+        this.width = this.step_x * 2;
+        this.height = this.step_z * 4;
+        this.draw_dx = -(this.width >> 1);
+        this.draw_dz = -(this.height >> 1);
         this.screen_z_base = -width - this.draw_dz;
-        this.cols = MathUtil.ceil(128.0 / (double) width * 2.0);
-        this.rows = 2 + MathUtil.ceil(128.0 / (double) width * 3.0);
-        this.dx = dx;
         this.dz = dz;
-        this.scale = scale;
+        this.sz = sz;
         this.pitch = pitch;
         this.mask = createMask(width, height);
     }
@@ -60,6 +51,15 @@ public enum ZoomLevel {
         return this.height;
     }
 
+    public final int getNumberOfColumns(int width) {
+        return MathUtil.ceil((double) width / (double) this.step_x / 2.0);
+    }
+
+    public final int getNumberOfRows(int height) {
+        return MathUtil.ceil((double) height / (double) this.step_z / 2.0);
+    }
+
+    /*
     public final int getColumns() {
         return this.cols;
     }
@@ -67,6 +67,7 @@ public enum ZoomLevel {
     public final int getRows() {
         return this.rows;
     }
+    */
 
     /**
      * Gets the x-position of the middle of a certain tile as drawn on the screen
@@ -75,8 +76,7 @@ public enum ZoomLevel {
      * @return x screen position of the tile (middle)
      */
     public final int getScreenX(int tx) {
-        // Take full-width steps for every 2, +half-width step for odd coordinates
-        return this.width * (tx >> 1) + (this.width >> 1) * (tx & 0x1);
+        return tx * this.step_x;
     }
 
     /**
@@ -86,10 +86,7 @@ public enum ZoomLevel {
      * @return z screen position of the tile (middle)
      */
     public final int getScreenZ(int tz) {
-        // Take full height steps for every 3, +1/third step for steps in between
-        int div3 = (tz / 3);
-        int mod3 = tz - (3 * div3);
-        return this.width * div3 + MathUtil.ceil((double) mod3 * (double) this.width / 3.0) + this.screen_z_base;
+        return tz * this.step_z + this.screen_z_base;
     }
 
     /**
@@ -176,8 +173,11 @@ public enum ZoomLevel {
 
     public Matrix4f getTransform(BlockFace facing) {
         Matrix4f transform = new Matrix4f();
-        transform.translate(this.dx, 0, this.dz);
-        transform.scale(this.scale);
+        transform.translate((float) (width / (16.0 * MathUtil.HALFROOTOFTWO)), 0, this.dz);
+
+        float scale_w = (float) width / 20.0f;
+        float scale_h = (float) width / this.sz;
+        transform.scale(scale_w, scale_w, scale_h);
 
         transform.translate(8, 8, 8);
         transform.rotateX(this.pitch);
@@ -192,8 +192,9 @@ public enum ZoomLevel {
         MapTexture mask = MapTexture.createEmpty(width, height);
         mask.fill(MapColorPalette.COLOR_WHITE);
 
+        int ratio_error = MathUtil.floor(((double) width / 3.0 * 4.0) - (double) height);
         int half_width = width >> 1;
-        int edge_y = height - width - 1;
+        int edge_y = height - width + ratio_error - 1;
 
         for (int x = 0; x < width; x++) {
             int x1, x2;

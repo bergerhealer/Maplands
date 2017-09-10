@@ -1,5 +1,7 @@
 package com.bergerkiller.bukkit.maplands;
 
+import java.util.Random;
+
 import org.bukkit.Material;
 import org.bukkit.block.BlockFace;
 import org.junit.Ignore;
@@ -13,6 +15,7 @@ import com.bergerkiller.bukkit.common.utils.CommonUtil;
 public class TestSprites {
     private int spriteIdx = 0;
     private IsometricBlockSprites[] sprites;
+    protected Random rand = new Random();
 
     static {
         CommonUtil.bootstrap();
@@ -21,7 +24,7 @@ public class TestSprites {
     @Ignore
     @Test
     public void testZoomMask() {
-        ZoomLevel zoom = ZoomLevel.ZOOM64;
+        ZoomLevel zoom = ZoomLevel.ZOOM4;
         MapTexture map = MapTexture.createEmpty((int) (2.0 * zoom.getWidth()) + 2, (int) (2.5 * zoom.getHeight()) + 2);
 
         map.draw(zoom.getMask(), zoom.getDrawX(2) + 1, zoom.getDrawZ(3) + 1, MapColorPalette.COLOR_BLUE);
@@ -36,6 +39,8 @@ public class TestSprites {
     @Test
     public void testSprites() {
         ZoomLevel zoom = ZoomLevel.ZOOM64;
+        Material mat1 = Material.GRASS;
+        Material mat2 = Material.SUGAR_CANE_BLOCK;
         MapTexture map = MapTexture.createEmpty(6 * zoom.getWidth(), 4 * zoom.getHeight());
         sprites = new IsometricBlockSprites[] {
                 IsometricBlockSprites.getSprites(BlockFace.NORTH_EAST, zoom),
@@ -47,17 +52,21 @@ public class TestSprites {
         map.fill(MapColorPalette.COLOR_RED);
 
         for (int n = 0; n < 6; n++) {
-            drawSprite(map, n, n * 3);
+            drawSprite(map, n, n * 3, mat1);
         }
 
-        for (int n = 3; n < 10; n++) {
-            drawSprite(map, n, n);
+        for (int n = 0; n < 6; n += 2) {
+            drawSprite(map, 8, 14 - n, n <= 3 ? mat2 : mat1);
+        }
+        
+        for (int n = 3; n < 9; n++) {
+            drawSprite(map, n, n, mat1);
         }
 
         MapDebugWindow.showMapForever(map, 1000 / map.getWidth());
     }
 
-    private void drawSprite(MapTexture map, int x, int z) {
+    private void drawSprite(MapTexture map, int x, int z, Material material) {
         if (spriteIdx >= sprites.length) {
             spriteIdx = 0;
         }
@@ -65,7 +74,8 @@ public class TestSprites {
         ZoomLevel zoom = sprite.getZoom();
 
         map.setRelativeBrushMask(zoom.getMask());
-        map.draw(sprite.getSprite(Material.GRASS), zoom.getDrawX(x), zoom.getDrawZ(z));
+        map.draw(sprite.getSprite(material), zoom.getDrawX(x), zoom.getDrawZ(z));
+        //map.fillRectangle(zoom.getDrawX(x), zoom.getDrawZ(z), zoom.getWidth(), zoom.getHeight(), (byte) (4 + rand.nextInt(100)));
         map.setRelativeBrushMask(null);
 
         map.fillRectangle(zoom.getScreenX(x) - 1, zoom.getScreenZ(z) - 1, 2, 2, MapColorPalette.COLOR_BLUE);
