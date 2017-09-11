@@ -37,7 +37,7 @@ public class TestFrameMap extends MapDisplay {
     private MapTexture menu_bg;
     int rendertime = 0;
     private static final int MENU_DURATION = 200; // amount of ticks menu is kept open while idle
-    private static final int VIEW_RANGE = 512; // amount of layers visible backwards and forwards the current block
+    private static final int VIEW_RANGE = (256*3); // amount of layers visible backwards and forwards the current block
 
     @Override
     public void onAttached() {
