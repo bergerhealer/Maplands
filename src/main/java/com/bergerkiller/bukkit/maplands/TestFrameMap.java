@@ -28,6 +28,8 @@ public class TestFrameMap extends MapDisplay {
     private int menuShowTicks = 0;
     private int menuSelectIndex = 0;
     private int currentRenderY;
+    private int minimumRenderY;
+    private int maximumRenderY;
     private boolean forwardRenderNeeded;
     private int tile_offset_x, tile_offset_z;
     private int minCols, maxCols, minRows, maxRows;
@@ -37,7 +39,6 @@ public class TestFrameMap extends MapDisplay {
     private MapTexture menu_bg;
     int rendertime = 0;
     private static final int MENU_DURATION = 200; // amount of ticks menu is kept open while idle
-    private static final int VIEW_RANGE = (256*3); // amount of layers visible backwards and forwards the current block
 
     @Override
     public void onAttached() {
@@ -110,15 +111,18 @@ public class TestFrameMap extends MapDisplay {
         }
         this.getLayer().setRelativeBrushMask(this.sprites.getBrushTexture());
 
-        this.currentRenderY = -VIEW_RANGE;
-        this.forwardRenderNeeded = true;
-
         int nrColumns = this.sprites.getZoom().getNumberOfColumns(this.getWidth());
         int nrRows = this.sprites.getZoom().getNumberOfRows(this.getHeight());
         this.minCols = -nrColumns;
         this.maxCols = nrColumns;
         this.minRows = -nrRows;
         this.maxRows = nrRows + 3;
+
+        this.minimumRenderY = -nrRows - (256 - py);
+        this.maximumRenderY = nrRows + py;
+
+        this.currentRenderY = this.minimumRenderY;
+        this.forwardRenderNeeded = true;
 
         // Clear drawn tiles state
         if (clear) {
@@ -386,6 +390,12 @@ public class TestFrameMap extends MapDisplay {
         getLayer().setDrawDepth(y);
         int tileIdx = -1;
         for (int dz = minRows; dz <= maxRows; dz++) {
+            int ymin = dz - (this.startBlock.getY());
+            int ymax = dz + (256 - this.startBlock.getY());
+            if (dz < ymin || dz > ymax) {
+                continue;
+            }
+
             for (int dx = minCols; dx <= maxCols; dx++) {
                 tileIdx++;
                 if (!this.drawnTiles[tileIdx] && !drawBlock(dx, y, dz, true)) {
@@ -408,16 +418,16 @@ public class TestFrameMap extends MapDisplay {
 
         // Render at most 50 ms / map / tick
         long startTime = System.currentTimeMillis();
-        if (this.currentRenderY <= VIEW_RANGE) {
+        if (this.currentRenderY <= this.maximumRenderY) {
             rendertime++;
             do {
                 if (forwardRenderNeeded) {
                     renderSlice(currentRenderY);
                     forwardRenderNeeded = this.getLayer().hasMoreDepth();
                 }
-            } while (++this.currentRenderY <= VIEW_RANGE && (System.currentTimeMillis() - startTime) < 50);
+            } while (++this.currentRenderY <= this.maximumRenderY && (System.currentTimeMillis() - startTime) < 50);
 
-            if (this.currentRenderY > VIEW_RANGE) {
+            if (this.currentRenderY > this.maximumRenderY) {
                 //System.out.println("RENDER TIME: " + rendertime);
             }
         }
