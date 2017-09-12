@@ -12,6 +12,29 @@ import com.bergerkiller.bukkit.common.utils.LogicUtil;
 public class TestCoordinates {
 
     @Test
+    public void testTileToBlockCoordinates() {
+        // Tests conversion from/to block coordinates and tile coordinates
+        for (int x = -100; x < 100; x++) {
+            for (int y = -100; y < 100; y++) {
+                for (int z = -100; z < 100; z++) {
+                    if (!MapUtil.isTile(x, y, z)) {
+                        continue;
+                    }
+
+                    IntVector3 tilePosIn = new IntVector3(x, y, z);
+                    IntVector3 blockPos = MapUtil.screenTileToBlock(BlockFace.NORTH_EAST, tilePosIn);
+                    assertNotNull(blockPos);
+                    IntVector3 tilePosOut = MapUtil.blockToScreenTile(BlockFace.NORTH_EAST, blockPos);
+                    if (tilePosOut == null) {
+                        fail("Tile position was expected to be " + tilePosIn + ", but was null");
+                    }
+                    assertEquals(tilePosIn, tilePosOut);
+                }
+            }
+        }
+    }
+
+    @Test
     public void testTileScreenConversion() {
         ZoomLevel zoom = ZoomLevel.DEFAULT;
         for (int x = 0; x < 50; x++) {
