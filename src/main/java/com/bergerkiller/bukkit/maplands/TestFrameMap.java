@@ -1,6 +1,7 @@
 package com.bergerkiller.bukkit.maplands;
 
 import java.util.Arrays;
+import java.util.HashSet;
 
 import org.bukkit.Bukkit;
 import org.bukkit.World;
@@ -10,6 +11,7 @@ import org.bukkit.entity.Player;
 
 import com.bergerkiller.bukkit.common.bases.IntVector3;
 import com.bergerkiller.bukkit.common.events.map.MapKeyEvent;
+import com.bergerkiller.bukkit.common.map.MapBlendMode;
 import com.bergerkiller.bukkit.common.map.MapCanvas;
 import com.bergerkiller.bukkit.common.map.MapColorPalette;
 import com.bergerkiller.bukkit.common.map.MapDisplay;
@@ -35,6 +37,7 @@ public class TestFrameMap extends MapDisplay {
     private int minCols, maxCols, minRows, maxRows;
     private boolean enableLight = false;
     private boolean[] drawnTiles; //TODO: Bitset may be faster/more memory efficient?
+    private final HashSet<IntVector3> dirtyTiles = new HashSet<IntVector3>();
     private MenuButton[] menuButtons;
     private MapTexture menu_bg;
     int rendertime = 0;
@@ -68,6 +71,9 @@ public class TestFrameMap extends MapDisplay {
         for (MenuButton button : this.menuButtons) {
             button.setDisplay(this);
         }
+
+        // Overwrite old sprites
+        getLayer().setBlendMode(MapBlendMode.NONE);
 
         this.setSessionMode(MapSessionMode.FOREVER); // VIEWING for debug, FOREVER for release
         this.setReceiveInputWhenHolding(true);
@@ -123,6 +129,7 @@ public class TestFrameMap extends MapDisplay {
 
         this.currentRenderY = this.minimumRenderY;
         this.forwardRenderNeeded = true;
+        this.dirtyTiles.clear();
 
         // Clear drawn tiles state
         if (clear) {
@@ -135,6 +142,29 @@ public class TestFrameMap extends MapDisplay {
         }
 
         rendertime = 0;
+    }
+
+    public void onBlockChange(Block block) {
+        int dx = block.getX() - this.startBlock.getX();
+        int dy = block.getY() - this.startBlock.getY();
+        int dz = block.getZ() - this.startBlock.getZ();
+        IntVector3 tile = MapUtil.blockToScreenTile(this.facing, dx, dy, dz);
+        if (tile == null || tile.x < this.minCols || tile.x > this.maxCols || tile.z < this.minRows || tile.z > this.maxRows) {
+            return;
+        }
+        this.dirtyTiles.add(tile);
+    }
+
+    private void invalidateTile(int tx, int ty, int tz) {
+        if (tx >= this.minCols && tx <= this.maxCols && tz >= this.minRows && tz <= this.maxRows) {
+            tx -= this.minCols;
+            tz -= this.minRows;
+            this.drawnTiles[tz * (this.maxCols - this.minCols + 1) + tx] = false;
+            this.forwardRenderNeeded = true;
+            if (this.currentRenderY > ty) {
+                this.currentRenderY = ty;
+            }
+        }
     }
 
     @Override
@@ -263,7 +293,7 @@ public class TestFrameMap extends MapDisplay {
         int z = this.startBlock.getZ() + d.z;
         if (y >= 0 && y < 256) {
             MapTexture sprite = this.sprites.getSprite(this.startBlock.getWorld(), x, y, z);
-            if (sprite != this.sprites.AIR) {
+            if (sprite != this.sprites.AIR || !isRedraw) {
                 draw_x += (this.getWidth() >> 1);
                 draw_y += (this.getHeight() >> 1);
 
@@ -275,10 +305,10 @@ public class TestFrameMap extends MapDisplay {
                         light = Math.max(light, getLight(x, y, z - 1));
                         light = Math.max(light, getLight(x, y, z + 1));
                     }
-                    
+
                     float lightf = (float) light / 15.0f;
                     lightf *= lightf;
-                    
+
                     byte[] in = sprite.getBuffer();
                     byte[] buff = testSprite.getBuffer();
                     for (int i = 0; i < buff.length; i++) {
@@ -414,6 +444,22 @@ public class TestFrameMap extends MapDisplay {
         }
         for (MenuButton button : this.menuButtons) {
             button.onTick();
+        }
+
+        // Re-render all dirty tiles
+        // If they result in holes, schedule the area behind for re-rendering
+        if (!dirtyTiles.isEmpty()) {
+            for (IntVector3 tile : this.dirtyTiles) {
+                getLayer().setDrawDepth(tile.y);
+                if (drawBlock(tile.x, tile.y, tile.z, false)) {
+                    for (int dtx = -1; dtx <= 1; dtx++) {
+                        for (int dtz = -2; dtz <= 2; dtz++) {
+                            invalidateTile(tile.x + dtx, tile.y, tile.z + dtz);
+                        }
+                    }
+                }
+            }
+            this.dirtyTiles.clear();
         }
 
         // Render at most 50 ms / map / tick

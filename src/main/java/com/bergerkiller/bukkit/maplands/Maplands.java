@@ -35,6 +35,8 @@ public class Maplands extends PluginBase {
 	    resourcePack = new MapResourcePack(config.get("resourcePack", ""));
 	    config.save();
 
+	    this.register(new MaplandsListener());
+
 	    this.loadPermissions(Permission.class);
 	}
 
