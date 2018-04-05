@@ -38,6 +38,12 @@ public class Maplands extends PluginBase {
 	    this.register(new MaplandsListener());
 
 	    this.loadPermissions(Permission.class);
+
+	    try {
+	        resourcePack.load();
+	    } catch (NoSuchMethodError e) {
+	        // eh.
+	    }
 	}
 
 	@Override
