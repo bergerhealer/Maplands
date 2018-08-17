@@ -1,5 +1,6 @@
 name: Maplands
 main: com.bergerkiller.bukkit.maplands.Maplands
+api-version: 1.13
 version: ${project.version}
 authors: [bergerkiller]
 description: Minecraft worlds in the map dimension
