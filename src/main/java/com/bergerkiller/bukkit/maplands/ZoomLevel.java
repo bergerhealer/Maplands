@@ -141,10 +141,9 @@ public enum ZoomLevel {
             int foundTileX_X = 0;
             int foundTileZ_X = 0;
             int lastDistSqZ = Integer.MAX_VALUE;
-            boolean foundAny;
+            boolean foundAny = false;
             for (int tz = 0;;tz++) {
                 if (!MapUtil.isTile(tx, p.y, tz)) {
-                    foundAny = false;
                     continue;
                 }
                 foundAny = true;
