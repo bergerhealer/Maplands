@@ -23,9 +23,9 @@ public class IsometricBlockSprites {
     private final BlockFace facing;
     private final ZoomLevel zoom;
     private final Matrix4f transform;
-    public final int width;
-    public final int height;
-    public final MapTexture AIR;
+    private final int width;
+    private final int height;
+    final MapTexture AIR;
 
     private IsometricBlockSprites(BlockFace facing, ZoomLevel zoom) {
         this.facing = facing;
@@ -41,7 +41,7 @@ public class IsometricBlockSprites {
      * 
      * @return zoom level
      */
-    public ZoomLevel getZoom() {
+    ZoomLevel getZoom() {
         return this.zoom;
     }
 
@@ -50,15 +50,15 @@ public class IsometricBlockSprites {
      * 
      * @return sprite brush
      */
-    public MapTexture getBrushTexture() {
+    MapTexture getBrushTexture() {
         return this.zoom.getMask();
     }
 
-    public MapTexture getSprite(Material material) {
+    MapTexture getSprite(Material material) {
         return getSprite(BlockData.fromMaterial(material).getDefaultRenderOptions());
     }
 
-    public MapTexture getSprite(BlockRenderOptions options) {
+    private MapTexture getSprite(BlockRenderOptions options) {
         MapTexture result = spriteCache.get(options);
         if (result == null) {
             result = MapTexture.createEmpty(this.width, this.height);
@@ -82,7 +82,7 @@ public class IsometricBlockSprites {
         return getSprite(block.getWorld(), block.getX(), block.getY(), block.getZ());
     }
 
-    public MapTexture getSprite(World world, int x, int y, int z) {
+    MapTexture getSprite(World world, int x, int y, int z) {
         return getSprite(BlockRenderOptions.fromBlock(world, x, y, z));
     }
 
@@ -90,7 +90,7 @@ public class IsometricBlockSprites {
 
     private static List<IsometricBlockSprites> instances = new ArrayList<IsometricBlockSprites>();
 
-    public static IsometricBlockSprites getSprites(BlockFace facing, ZoomLevel zoom) {
+    static IsometricBlockSprites getSprites(BlockFace facing, ZoomLevel zoom) {
         for (IsometricBlockSprites sprites : instances) {
             if (sprites.facing == facing && sprites.zoom == zoom) {
                 return sprites;

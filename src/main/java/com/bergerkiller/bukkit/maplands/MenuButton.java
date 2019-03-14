@@ -14,7 +14,7 @@ public class MenuButton {
     private int blinkCtr;
     private MapDisplay display;
 
-    public MenuButton(String textureName, int x, int y) {
+    MenuButton(String textureName, int x, int y) {
         this.x = x;
         this.y = y;
         this.selected = false;
@@ -30,11 +30,11 @@ public class MenuButton {
         this.texture_off.draw(texture_base, 0, 0, MapColorPalette.COLOR_BLACK);
     }
 
-    public void setDisplay(MapDisplay display) {
+    void setDisplay(MapDisplay display) {
         this.display = display;
     }
 
-    public void onTick() {
+    void onTick() {
         if (this.changed) {
             this.changed = false;
             if (this.visible) {
@@ -62,7 +62,7 @@ public class MenuButton {
     public void onPressed() {
     }
 
-    public void setVisible(boolean visible) {
+    void setVisible(boolean visible) {
         if (this.visible != visible) {
             this.visible = visible;
             this.changed = true;
@@ -70,7 +70,7 @@ public class MenuButton {
         }
     }
 
-    public void setSelected(boolean selected) {
+    void setSelected(boolean selected) {
         if (this.selected != selected) {
             this.selected = selected;
             this.changed = true;

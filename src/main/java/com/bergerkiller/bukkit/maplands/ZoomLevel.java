@@ -73,6 +73,7 @@ public enum ZoomLevel {
      * Gets the x-position of the middle of a certain tile as drawn on the screen
      * 
      * @param tx - coordinate of the tile
+     *
      * @return x screen position of the tile (middle)
      */
     public final int getScreenX(int tx) {
@@ -83,6 +84,7 @@ public enum ZoomLevel {
      * Gets the z-position of the middle of a certain tile as drawn on the screen
      * 
      * @param tz - coordinate of the tile
+     *
      * @return z screen position of the tile (middle)
      */
     public final int getScreenZ(int tz) {
@@ -93,6 +95,7 @@ public enum ZoomLevel {
      * Gets the x-position of a certain sprite coordinate as drawn on the canvas
      * 
      * @param x - coordinate of the sprite
+     *
      * @return x - position on the canvas (top-left)
      */
     public final int getDrawX(int x) {
@@ -103,6 +106,7 @@ public enum ZoomLevel {
      * Gets the z-position of a certain sprite coordinate as drawn on the canvas
      * 
      * @param z - coordinate of the sprite
+     *
      * @return z - position on the canvas (top-left)
      */
     public final int getDrawZ(int z) {
@@ -113,6 +117,7 @@ public enum ZoomLevel {
      * Takes a coordinate of a tile and returns the coordinate in the middle of the tile on the screen.
      * 
      * @param p coordinate of the tile (y is depth)
+     *
      * @return screen coordinate of the middle of the tile
      */
     public final IntVector3 tileToScreen(IntVector3 p) {
@@ -124,6 +129,7 @@ public enum ZoomLevel {
      * This function is incredibly slow right now and really needs optimization!
      * 
      * @param p coordinate on the screen (y is depth)
+     *
      * @return tile coordinate at this screen coordinate
      */
     public final IntVector3 screenToTile(IntVector3 p) {
@@ -135,9 +141,10 @@ public enum ZoomLevel {
             int foundTileX_X = 0;
             int foundTileZ_X = 0;
             int lastDistSqZ = Integer.MAX_VALUE;
-            boolean foundAny = false;
+            boolean foundAny;
             for (int tz = 0;;tz++) {
                 if (!MapUtil.isTile(tx, p.y, tz)) {
+                    foundAny = false;
                     continue;
                 }
                 foundAny = true;

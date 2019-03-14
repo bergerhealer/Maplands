@@ -1,17 +1,27 @@
 package com.bergerkiller.bukkit.maplands;
 
+import com.bergerkiller.bukkit.common.map.MapDisplay;
+import com.bergerkiller.bukkit.common.nbt.CommonTagCompound;
+import com.bergerkiller.bukkit.common.utils.ItemUtil;
+import com.bergerkiller.generated.net.minecraft.server.EntityItemFrameHandle;
+import org.bukkit.Material;
+import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 
 import com.bergerkiller.bukkit.common.bases.IntVector3;
 import com.bergerkiller.bukkit.common.utils.MathUtil;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.ItemFrame;
+import org.bukkit.inventory.ItemStack;
 
 public class MapUtil {
     /**
      * Checks whether a particular set of tile coordinates if a valid tile
      * 
-     * @param tx
-     * @param ty
-     * @param tz
+     * @param tx The tiles X coordinate.
+     * @param ty The tiles Y coordinate.
+     * @param tz The tiles Z coordinate.
+     *
      * @return True if the coordinates represent a valid tile
      */
     public static boolean isTile(int tx, int ty, int tz) {
@@ -33,6 +43,7 @@ public class MapUtil {
      * 
      * @param facing view
      * @param p tile coordinates
+     *
      * @return block coordinates. Null if not a valid tile.
      */
     public static IntVector3 screenTileToBlock(BlockFace facing, IntVector3 p) {
@@ -46,6 +57,7 @@ public class MapUtil {
      * @param px tile coordinates x
      * @param py tile coordinates y
      * @param pz tile coordinates z
+     *
      * @return block coordinates. Null if not a valid tile.
      */
     public static IntVector3 screenTileToBlock(BlockFace facing, int px, int py, int pz) {
@@ -83,6 +95,7 @@ public class MapUtil {
      * 
      * @param facing view
      * @param blockPos relative block coordinates
+     *
      * @return output tile coordinates
      */
     public static IntVector3 blockToScreenTile(BlockFace facing, IntVector3 blockPos) {
@@ -96,13 +109,12 @@ public class MapUtil {
      * @param dx relative block coordinate x
      * @param dy relative block coordinate y
      * @param dz relative block coordinate z
+     *
      * @return tile coordinates
      */
     public static IntVector3 blockToScreenTile(BlockFace facing, int dx, int dy, int dz) {
         // Undo facing
-        if (facing == BlockFace.NORTH_EAST) {
-            // nothing
-        } else if (facing == BlockFace.SOUTH_WEST) {
+        if (facing == BlockFace.SOUTH_WEST) {
             dx = -dx;
             dz = -dz;
         } else if (facing == BlockFace.NORTH_WEST) {
@@ -146,5 +158,18 @@ public class MapUtil {
             }
         }
         return new IntVector3(px, py, pz);
+    }
+
+    static boolean isMaplandMap(Entity entity){
+        if(!(entity instanceof ItemFrame)) return false;
+
+        ItemFrame itemFrame = (ItemFrame)entity;
+        ItemStack itemStack = itemFrame.getItem();
+        if(!itemStack.getType().equals(Material.MAP)) return false;
+
+        CommonTagCompound tags = ItemUtil.getMetaTag(EntityItemFrameHandle.fromBukkit(itemFrame).getItem());
+        if(tags == null) return false;
+
+        return tags.containsKey("mapDisplayClass");
     }
 }

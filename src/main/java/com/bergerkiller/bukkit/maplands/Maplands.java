@@ -9,12 +9,13 @@ import com.bergerkiller.bukkit.common.PluginBase;
 import com.bergerkiller.bukkit.common.config.FileConfiguration;
 import com.bergerkiller.bukkit.common.map.MapDisplay;
 import com.bergerkiller.bukkit.common.map.MapResourcePack;
+import org.bukkit.material.MaterialData;
 
 public class Maplands extends PluginBase {
-    public static Maplands plugin;
+    private static Maplands plugin;
     private static MapResourcePack resourcePack;
 
-    public static MapResourcePack getResourcePack() {
+    static MapResourcePack getResourcePack() {
         if (resourcePack == null) {
             resourcePack = MapResourcePack.VANILLA; // fallback under test
             MapResourcePack.VANILLA.load(); // test! Make sure it is loaded.

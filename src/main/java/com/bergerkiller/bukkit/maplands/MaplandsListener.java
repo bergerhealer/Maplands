@@ -1,15 +1,20 @@
 package com.bergerkiller.bukkit.maplands;
 
+import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.entity.ItemFrame;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPhysicsEvent;
 import org.bukkit.event.block.BlockRedstoneEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 
 import com.bergerkiller.bukkit.common.map.MapDisplay;
 import com.bergerkiller.bukkit.common.utils.FaceUtil;
+import org.bukkit.inventory.ItemStack;
 
 public class MaplandsListener implements Listener {
 
@@ -41,5 +46,12 @@ public class MaplandsListener implements Listener {
         if (event.getClickedBlock() != null) {
             handleBlockChanges(event.getClickedBlock());
         }
+    }
+
+    @EventHandler
+    public void onPlayerInteractEntity(PlayerInteractEntityEvent event){
+        if(!MapUtil.isMaplandMap(event.getRightClicked())) return;
+
+        event.setCancelled(true);
     }
 }

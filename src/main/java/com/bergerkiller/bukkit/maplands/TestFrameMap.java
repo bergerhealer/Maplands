@@ -40,7 +40,7 @@ public class TestFrameMap extends MapDisplay {
     private final HashSet<IntVector3> dirtyTiles = new HashSet<IntVector3>();
     private MenuButton[] menuButtons;
     private MapTexture menu_bg;
-    int rendertime = 0;
+    private int rendertime = 0;
     private static final int MENU_DURATION = 200; // amount of ticks menu is kept open while idle
 
     @Override
@@ -144,7 +144,7 @@ public class TestFrameMap extends MapDisplay {
         rendertime = 0;
     }
 
-    public void onBlockChange(Block block) {
+    void onBlockChange(Block block) {
         int dx = block.getX() - this.startBlock.getX();
         int dy = block.getY() - this.startBlock.getY();
         int dz = block.getZ() - this.startBlock.getZ();
@@ -213,7 +213,7 @@ public class TestFrameMap extends MapDisplay {
         }
     }
 
-    public void moveTiles(int dtx, int dtz, BlockFace blockChange) {
+    private void moveTiles(int dtx, int dtz, BlockFace blockChange) {
         // Move all pixels
         getLayer().movePixels(
                 zoom.getScreenX(dtx) - zoom.getScreenX(0),
@@ -270,7 +270,7 @@ public class TestFrameMap extends MapDisplay {
         render(false);
     }
 
-    public boolean drawBlock(int x, int y, int z, boolean isRedraw) {
+    private boolean drawBlock(int x, int y, int z, boolean isRedraw) {
         IntVector3 b = getBlockAtTile(x, y, z);
         if (b != null) {
             int draw_x = sprites.getZoom().getDrawX(x);
@@ -286,8 +286,8 @@ public class TestFrameMap extends MapDisplay {
     private int getLight(int x, int y, int z) {
         return WorldUtil.getSkyLight(this.startBlock.getWorld().getChunkAt(x >> 4, z >> 4), x, y, z);
     }
-    
-    public boolean drawBlock(IntVector3 d, int draw_x, int draw_y, boolean isRedraw) {
+
+    private boolean drawBlock(IntVector3 d, int draw_x, int draw_y, boolean isRedraw) {
         int x = this.startBlock.getX() + d.x;
         int y = this.startBlock.getY() + d.y;
         int z = this.startBlock.getZ() + d.z;
@@ -329,7 +329,7 @@ public class TestFrameMap extends MapDisplay {
         }
     }
 
-    public void hideMenu() {
+    private void hideMenu() {
         menuShowTicks = 0;
         for (MenuButton button : this.menuButtons) {
             button.setVisible(false);
@@ -337,7 +337,7 @@ public class TestFrameMap extends MapDisplay {
         getLayer(1).clearRectangle(0, 0, this.menu_bg.getWidth(), this.menu_bg.getHeight());
     }
 
-    public void showMenu() {
+    private void showMenu() {
         menuShowTicks = MENU_DURATION;
         for (int i = 0; i < this.menuButtons.length; i++) {
             this.menuButtons[i].setVisible(true);
@@ -346,7 +346,7 @@ public class TestFrameMap extends MapDisplay {
         getLayer(1).draw(this.menu_bg, 0, 0);
     }
 
-    public void setMenuIndex(int index) {
+    private void setMenuIndex(int index) {
         while (index < 0) {
             index += this.menuButtons.length;
         }
