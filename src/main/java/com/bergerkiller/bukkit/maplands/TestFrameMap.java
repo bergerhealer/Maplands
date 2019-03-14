@@ -10,6 +10,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 
 import com.bergerkiller.bukkit.common.bases.IntVector3;
+import com.bergerkiller.bukkit.common.events.map.MapClickEvent;
 import com.bergerkiller.bukkit.common.events.map.MapKeyEvent;
 import com.bergerkiller.bukkit.common.map.MapBlendMode;
 import com.bergerkiller.bukkit.common.map.MapCanvas;
@@ -435,6 +436,11 @@ public class TestFrameMap extends MapDisplay {
                 }
             }
         }
+    }
+
+    @Override
+    public void onRightClick(MapClickEvent event) {
+        event.setCancelled(true);
     }
 
     @Override
