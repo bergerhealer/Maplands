@@ -1,6 +1,8 @@
 package com.bergerkiller.bukkit.maplands;
 
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 
 import org.bukkit.Bukkit;
@@ -9,6 +11,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 
+import com.bergerkiller.bukkit.common.Task;
 import com.bergerkiller.bukkit.common.bases.IntVector3;
 import com.bergerkiller.bukkit.common.events.map.MapClickEvent;
 import com.bergerkiller.bukkit.common.events.map.MapKeyEvent;
@@ -28,13 +31,13 @@ public class TestFrameMap extends MapDisplay {
     private ZoomLevel zoom;
     private BlockFace facing;
     private Block startBlock;
+    private final MapBlockBounds blockBounds = new MapBlockBounds();
     private int menuShowTicks = 0;
     private int menuSelectIndex = 0;
     private int currentRenderY;
     private int minimumRenderY;
     private int maximumRenderY;
     private boolean forwardRenderNeeded;
-    private int tile_offset_x, tile_offset_z;
     private int minCols, maxCols, minRows, maxRows;
     private boolean enableLight = false;
     private boolean[] drawnTiles; //TODO: Bitset may be faster/more memory efficient?
@@ -79,6 +82,13 @@ public class TestFrameMap extends MapDisplay {
         this.setSessionMode(MapSessionMode.FOREVER); // VIEWING for debug, FOREVER for release
         this.setReceiveInputWhenHolding(true);
         this.render(true);
+
+        refreshMapDisplayLookup();
+    }
+
+    @Override
+    public void onDetached() {
+        refreshMapDisplayLookup();
     }
 
     private void render(boolean clear) {
@@ -123,10 +133,14 @@ public class TestFrameMap extends MapDisplay {
         this.minCols = -nrColumns;
         this.maxCols = nrColumns;
         this.minRows = -nrRows;
-        this.maxRows = nrRows + 3;
+        this.maxRows = nrRows;
 
         this.minimumRenderY = -nrRows - (256 - py);
         this.maximumRenderY = nrRows + py;
+
+        this.blockBounds.update(this.startBlock, this.facing,
+                this.minCols, this.minimumRenderY, this.minRows,
+                this.maxCols, this.maximumRenderY, this.maxRows);
 
         this.currentRenderY = this.minimumRenderY;
         this.forwardRenderNeeded = true;
@@ -145,15 +159,26 @@ public class TestFrameMap extends MapDisplay {
         rendertime = 0;
     }
 
+    public boolean isRenderingWorld(World world) {
+        return this.startBlock.getWorld() == world;
+    }
+
     public void onBlockChange(Block block) {
-        int dx = block.getX() - this.startBlock.getX();
-        int dy = block.getY() - this.startBlock.getY();
-        int dz = block.getZ() - this.startBlock.getZ();
-        IntVector3 tile = MapUtil.blockToScreenTile(this.facing, dx, dy, dz);
-        if (tile == null || tile.x < this.minCols || tile.x > this.maxCols || tile.z < this.minRows || tile.z > this.maxRows) {
-            return;
+        onBlockChange(block.getWorld(), block.getX(), block.getY(), block.getZ());
+    }
+
+    public void onBlockChange(World world, int bx, int by, int bz) {
+        // Check possibly in range before doing computationally expensive stuff
+        if (world == this.startBlock.getWorld() && this.blockBounds.contains(bx, by, bz)) {
+            int dx = bx - this.startBlock.getX();
+            int dy = by - this.startBlock.getY();
+            int dz = bz - this.startBlock.getZ();
+            IntVector3 tile = MapUtil.blockToScreenTile(this.facing, dx, dy, dz);
+            if (tile == null || tile.x < this.minCols || tile.x > this.maxCols || tile.z < this.minRows || tile.z > this.maxRows) {
+                return;
+            }
+            this.dirtyTiles.add(tile);
         }
-        this.dirtyTiles.add(tile);
     }
 
     private void invalidateTile(int tx, int ty, int tz) {
@@ -272,7 +297,7 @@ public class TestFrameMap extends MapDisplay {
     }
 
     public boolean drawBlock(int x, int y, int z, boolean isRedraw) {
-        IntVector3 b = getBlockAtTile(x, y, z);
+        IntVector3 b = MapUtil.screenTileToBlock(this.facing, x, y, z);
         if (b != null) {
             int draw_x = sprites.getZoom().getDrawX(x);
             int draw_z = sprites.getZoom().getDrawZ(z);
@@ -409,12 +434,8 @@ public class TestFrameMap extends MapDisplay {
         if (tile == null) {
             return null;
         } else {
-            return getBlockAtTile(tile.x, tile.y, tile.z);
+            return MapUtil.screenTileToBlock(this.facing, tile.x, tile.y, tile.z);
         }
-    }
-
-    public IntVector3 getBlockAtTile(int tx, int ty, int tz) {
-        return MapUtil.screenTileToBlock(this.facing, tx + this.tile_offset_x, ty, tz + this.tile_offset_z);
     }
 
     private void renderSlice(int y) {
@@ -485,4 +506,25 @@ public class TestFrameMap extends MapDisplay {
         }
     }
 
+    // Refreshed automatically and cached
+    // It is used very often to handle block physics; this makes this faster
+    private static Collection<TestFrameMap> all_maplands_displays = Collections.emptySet();
+    private static Task refresh_mapdisplays_task = null;
+    private static void refreshMapDisplayLookup() {
+        // Refresh now, and again one tick delayed, to be sure it is updated.
+        all_maplands_displays = MapDisplay.getAllDisplays(TestFrameMap.class);
+        if (refresh_mapdisplays_task == null) {
+            refresh_mapdisplays_task = new Task(Maplands.plugin) {
+                @Override
+                public void run() {
+                    all_maplands_displays = MapDisplay.getAllDisplays(TestFrameMap.class);
+                    refresh_mapdisplays_task = null;
+                }
+            };
+        }
+    }
+
+    public static Collection<TestFrameMap> getAllDisplays() {
+        return all_maplands_displays;
+    }
 }

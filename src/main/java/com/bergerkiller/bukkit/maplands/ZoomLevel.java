@@ -56,7 +56,7 @@ public enum ZoomLevel {
     }
 
     public final int getNumberOfRows(int height) {
-        return MathUtil.ceil((double) height / (double) this.step_z / 2.0);
+        return 3 + MathUtil.ceil((double) height / (double) this.step_z / 2.0);
     }
 
     /*
