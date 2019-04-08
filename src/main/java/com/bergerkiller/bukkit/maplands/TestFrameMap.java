@@ -498,7 +498,7 @@ public class TestFrameMap extends MapDisplay {
                     renderSlice(currentRenderY);
                     forwardRenderNeeded = this.getLayer().hasMoreDepth();
                 }
-            } while (++this.currentRenderY <= this.maximumRenderY && (System.currentTimeMillis() - startTime) < 50);
+            } while (++this.currentRenderY <= this.maximumRenderY && (System.currentTimeMillis() - startTime) < Maplands.getMaxRenderTime());
 
             if (this.currentRenderY > this.maximumRenderY) {
                 //System.out.println("RENDER TIME: " + rendertime);

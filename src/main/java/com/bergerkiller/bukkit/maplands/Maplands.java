@@ -13,6 +13,7 @@ import com.bergerkiller.bukkit.common.map.MapResourcePack;
 public class Maplands extends PluginBase {
     public static Maplands plugin;
     private static MapResourcePack resourcePack;
+    private static int maxRenderTime = 50;
 
     public static MapResourcePack getResourcePack() {
         if (resourcePack == null) {
@@ -20,6 +21,10 @@ public class Maplands extends PluginBase {
             MapResourcePack.VANILLA.load(); // test! Make sure it is loaded.
         }
         return resourcePack;
+    }
+
+    public static int getMaxRenderTime() {
+        return maxRenderTime;
     }
 
 	@Override
@@ -33,6 +38,10 @@ public class Maplands extends PluginBase {
 	    config.setHeader("resourcePack", "Specifies a resource pack to use when rendering blocks");
 	    config.addHeader("resourcePack", "When left empty the Vanilla Minecraft look is displayed");
 	    resourcePack = new MapResourcePack(config.get("resourcePack", ""));
+
+	    config.setHeader("maxRenderTime", "Specifies the maximum amount of time in milliseconds the plugin");
+	    config.addHeader("maxRenderTime", "may spend rendering the map during a single tick, per map");
+	    maxRenderTime = config.get("maxRenderTime", 50);
 	    config.save();
 
 	    this.register(new MaplandsListener());
