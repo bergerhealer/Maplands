@@ -22,6 +22,7 @@ import com.bergerkiller.bukkit.common.map.MapDisplay;
 import com.bergerkiller.bukkit.common.map.MapSessionMode;
 import com.bergerkiller.bukkit.common.map.MapTexture;
 import com.bergerkiller.bukkit.common.map.MapPlayerInput.Key;
+import com.bergerkiller.bukkit.common.utils.DebugUtil;
 import com.bergerkiller.bukkit.common.utils.FaceUtil;
 import com.bergerkiller.bukkit.common.utils.MathUtil;
 import com.bergerkiller.bukkit.common.utils.WorldUtil;
@@ -259,7 +260,7 @@ public class TestFrameMap extends MapDisplay {
             fMaxCols += dtx - 1;
         }
         if (dtz > 0) {
-            fMinRows += dtz + 5;
+            fMinRows += dtz + 7;
         } else if (dtz < 0) {
             fMaxRows += dtz - 5;
         }
