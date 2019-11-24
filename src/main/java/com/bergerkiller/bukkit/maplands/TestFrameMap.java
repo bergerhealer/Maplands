@@ -22,7 +22,6 @@ import com.bergerkiller.bukkit.common.map.MapDisplay;
 import com.bergerkiller.bukkit.common.map.MapSessionMode;
 import com.bergerkiller.bukkit.common.map.MapTexture;
 import com.bergerkiller.bukkit.common.map.MapPlayerInput.Key;
-import com.bergerkiller.bukkit.common.utils.DebugUtil;
 import com.bergerkiller.bukkit.common.utils.FaceUtil;
 import com.bergerkiller.bukkit.common.utils.MathUtil;
 import com.bergerkiller.bukkit.common.utils.WorldUtil;
@@ -50,6 +49,7 @@ public class TestFrameMap extends MapDisplay {
 
     @Override
     public void onAttached() {
+        this.getLayer().fill(Maplands.getBackgroundColor());
         this.menuButtons = new MenuButton[] {
                 new MenuButton("zoom_in", 0, 0) {
                     public void onPressed() {
@@ -502,6 +502,15 @@ public class TestFrameMap extends MapDisplay {
             } while (++this.currentRenderY <= this.maximumRenderY && (System.currentTimeMillis() - startTime) < Maplands.getMaxRenderTime());
 
             if (this.currentRenderY > this.maximumRenderY) {
+                // Fill all remaining holes with the desired background color
+                for (int x = 0; x < this.getWidth(); x++) {
+                    for (int y = 0; y < this.getHeight(); y++) {
+                        if (this.getLayer().getDepth(x, y) == MapCanvas.MAX_DEPTH) {
+                            this.getLayer().writePixel(x, y, Maplands.getBackgroundColor());
+                        }
+                    }
+                }
+
                 //System.out.println("RENDER TIME: " + rendertime);
             }
         }

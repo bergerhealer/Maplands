@@ -1,5 +1,8 @@
 package com.bergerkiller.bukkit.maplands;
 
+import java.util.Locale;
+import java.util.logging.Level;
+
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -7,6 +10,7 @@ import org.bukkit.inventory.ItemStack;
 import com.bergerkiller.bukkit.common.Common;
 import com.bergerkiller.bukkit.common.PluginBase;
 import com.bergerkiller.bukkit.common.config.FileConfiguration;
+import com.bergerkiller.bukkit.common.map.MapColorPalette;
 import com.bergerkiller.bukkit.common.map.MapDisplay;
 import com.bergerkiller.bukkit.common.map.MapResourcePack;
 
@@ -14,6 +18,7 @@ public class Maplands extends PluginBase {
     public static Maplands plugin;
     private static MapResourcePack resourcePack;
     private static int maxRenderTime = 50;
+    private static byte backgroundColor = MapColorPalette.COLOR_TRANSPARENT;
 
     public static MapResourcePack getResourcePack() {
         if (resourcePack == null) {
@@ -25,6 +30,10 @@ public class Maplands extends PluginBase {
 
     public static int getMaxRenderTime() {
         return maxRenderTime;
+    }
+
+    public static byte getBackgroundColor() {
+        return backgroundColor;
     }
 
 	@Override
@@ -42,6 +51,46 @@ public class Maplands extends PluginBase {
 	    config.setHeader("maxRenderTime", "Specifies the maximum amount of time in milliseconds the plugin");
 	    config.addHeader("maxRenderTime", "may spend rendering the map during a single tick, per map");
 	    maxRenderTime = config.get("maxRenderTime", 50);
+
+	    config.setHeader("backgroundColor", "The background color of maps showing the void in hexadecimal format, for example: '#1256FE'");
+	    config.addHeader("backgroundColor", "You can use the constants: transparent, black, white, red, green, blue");
+	    String backgroundColorName = config.get("backgroundColor", "transparent");
+	    if (backgroundColorName.equalsIgnoreCase("transparent")) {
+	        backgroundColor = MapColorPalette.COLOR_TRANSPARENT;
+	    } else if (backgroundColorName.equalsIgnoreCase("black")) {
+	        backgroundColor = MapColorPalette.COLOR_BLACK;
+	    } else if (backgroundColorName.equalsIgnoreCase("white")) {
+	        backgroundColor = MapColorPalette.COLOR_WHITE;
+	    } else if (backgroundColorName.equalsIgnoreCase("red")) {
+	        backgroundColor = MapColorPalette.COLOR_RED;
+	    } else if (backgroundColorName.equalsIgnoreCase("green")) {
+	        backgroundColor = MapColorPalette.COLOR_GREEN;
+	    } else if (backgroundColorName.equalsIgnoreCase("blue")) {
+	        backgroundColor = MapColorPalette.COLOR_BLUE;
+	    } else {
+	        while (backgroundColorName.startsWith("#")) {
+	            backgroundColorName = backgroundColorName.substring(1);
+	        }
+	        if (backgroundColorName.startsWith("0x") || backgroundColorName.startsWith("0X")) {
+	            backgroundColorName = backgroundColorName.substring(2);
+	        }
+	        try {
+	            if (backgroundColorName.length() == 6) {
+	                int rgb_color = Integer.parseInt(backgroundColorName.toUpperCase(Locale.ENGLISH), 16);
+	                backgroundColor = MapColorPalette.getColor(new java.awt.Color(rgb_color));
+	            } else {
+	                int map_color = Integer.parseInt(backgroundColorName.toUpperCase(Locale.ENGLISH));
+	                if (map_color < 0 || map_color >= 256) {
+	                    this.log(Level.WARNING, "Background color '" + backgroundColorName + "' is out of range");
+	                } else {
+	                    backgroundColor = (byte) (map_color & 0xFF);
+	                }
+	            }
+	        } catch (NumberFormatException ex) {
+	            this.log(Level.WARNING, "Background color '" + backgroundColorName + "' can not be decoded");
+	        }
+	    }
+
 	    config.save();
 
 	    this.register(new MaplandsListener());
