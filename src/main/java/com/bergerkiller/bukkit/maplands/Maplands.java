@@ -19,6 +19,7 @@ public class Maplands extends PluginBase {
     private static MapResourcePack resourcePack;
     private static int maxRenderTime = 50;
     private static byte backgroundColor = MapColorPalette.COLOR_TRANSPARENT;
+    private MapCanvasCache cache;
 
     public static MapResourcePack getResourcePack() {
         if (resourcePack == null) {
@@ -26,6 +27,10 @@ public class Maplands extends PluginBase {
             MapResourcePack.VANILLA.load(); // test! Make sure it is loaded.
         }
         return resourcePack;
+    }
+
+    public MapCanvasCache getCache() {
+        return cache;
     }
 
     public static int getMaxRenderTime() {
@@ -40,6 +45,8 @@ public class Maplands extends PluginBase {
 	public void enable() {
 	    plugin = this;
 
+	    this.cache = new MapCanvasCache(this, this.getDataFile("cache"));
+
 	    MapResourcePack.VANILLA.load();
 
 	    FileConfiguration config = new FileConfiguration(this);
@@ -51,6 +58,11 @@ public class Maplands extends PluginBase {
 	    config.setHeader("maxRenderTime", "Specifies the maximum amount of time in milliseconds the plugin");
 	    config.addHeader("maxRenderTime", "may spend rendering the map during a single tick, per map");
 	    maxRenderTime = config.get("maxRenderTime", 50);
+
+	    config.setHeader("enableCache", "Whether map data is written to disk and restored when viewed again");
+	    config.addHeader("enableCache", "The rendered map data can be found inside the cache subdirectory");
+	    config.addHeader("enableCache", "Having this enabled will reduce server lag when a large display is initialized");
+	    cache.setEnabled(config.get("enableCache", true));
 
 	    config.setHeader("backgroundColor", "The background color of maps showing the void in hexadecimal format, for example: '#1256FE'");
 	    config.addHeader("backgroundColor", "You can use the constants: transparent, black, white, red, green, blue");

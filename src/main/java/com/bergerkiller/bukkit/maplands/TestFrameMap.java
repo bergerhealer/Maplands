@@ -82,7 +82,13 @@ public class TestFrameMap extends MapDisplay {
 
         this.setSessionMode(MapSessionMode.FOREVER); // VIEWING for debug, FOREVER for release
         this.setReceiveInputWhenHolding(true);
-        this.render(true);
+
+        // Load from cache if possible
+        if (Maplands.plugin.getCache().load(this.getMapInfo().uuid, this.getLayer())) {
+            this.render(RenderMode.FROM_CACHE);
+        } else {
+            this.render(RenderMode.INITIALIZE);
+        }
 
         refreshMapDisplayLookup();
     }
@@ -90,9 +96,21 @@ public class TestFrameMap extends MapDisplay {
     @Override
     public void onDetached() {
         refreshMapDisplayLookup();
+
+        // Save our current state to disk
+        Maplands.plugin.getCache().save(this.getMapInfo().uuid, this.getLayer());
     }
 
-    private void render(boolean clear) {
+    private static enum RenderMode {
+        /** Renders the entire map from scratch */
+        INITIALIZE,
+        /** Renders assuming the map already contains color and depth info */
+        FROM_CACHE,
+        /** Renders assuming the map was translated, but has missing areas */
+        TRANSLATION
+    }
+
+    private void render(RenderMode renderMode) {
         int px = properties.get("px", 0);
         int py = properties.get("py", 0);
         int pz = properties.get("pz", 0);
@@ -115,16 +133,14 @@ public class TestFrameMap extends MapDisplay {
 
         // Get the correct sprites
         this.sprites = IsometricBlockSprites.getSprites(facing, this.zoom);
-
         this.testSprite = MapTexture.createEmpty(zoom.getWidth(), zoom.getHeight());
 
         // Start coordinates for the view
         this.startBlock = world.getBlockAt(px, py, pz);
-
         this.getLayer().setRelativeBrushMask(null);
         //this.getLayer().setDrawDepth(-VIEW_RANGE);
         //this.getLayer().fill(MapColorPalette.COLOR_RED);
-        if (clear) {
+        if (renderMode == RenderMode.INITIALIZE) {
             this.getLayer().clearDepthBuffer();
         }
         this.getLayer().setRelativeBrushMask(this.sprites.getBrushTexture());
@@ -139,16 +155,24 @@ public class TestFrameMap extends MapDisplay {
         this.minimumRenderY = -nrRows - (256 - py);
         this.maximumRenderY = nrRows + py;
 
-        this.blockBounds.update(this.startBlock, this.facing,
+        this.blockBounds.update(this.facing,
                 this.minCols, this.minimumRenderY, this.minRows,
                 this.maxCols, this.maximumRenderY, this.maxRows);
+        this.blockBounds.offset(this.startBlock);
 
-        this.currentRenderY = this.minimumRenderY;
+        if (renderMode == RenderMode.FROM_CACHE && this.properties.get("finishedRendering", false)) {
+            this.currentRenderY = this.maximumRenderY;
+        } else {
+            this.currentRenderY = this.minimumRenderY;
+            this.properties.set("finishedRendering", false);
+        }
+
         this.forwardRenderNeeded = true;
         this.dirtyTiles.clear();
 
-        // Clear drawn tiles state
-        if (clear) {
+        // Reset drawn tiles state when initializing / from cache
+        // This will cause everything to render again
+        if (renderMode != RenderMode.TRANSLATION) {
             int len = (this.maxRows - this.minRows + 1) * (this.maxCols - this.minCols + 1);
             if (this.drawnTiles == null || len != this.drawnTiles.length) {
                 this.drawnTiles = new boolean[len];
@@ -235,7 +259,7 @@ public class TestFrameMap extends MapDisplay {
 
             if (event.getKey() == Key.ENTER) {
                 //rotate(1);
-                this.render(true);
+                this.render(RenderMode.INITIALIZE);
             }
         }
     }
@@ -264,6 +288,7 @@ public class TestFrameMap extends MapDisplay {
         } else if (dtz < 0) {
             fMaxRows += dtz - 5;
         }
+
         boolean[] newDrawnTiles = new boolean[this.drawnTiles.length];
         int tileIdx = -1;
         for (int y = this.minRows; y <= this.maxRows; y++) {
@@ -294,7 +319,8 @@ public class TestFrameMap extends MapDisplay {
         // Re-render with the changed block position
         properties.set("px", properties.get("px", 0) + blockChange.getModX());
         properties.set("pz", properties.get("pz", 0) + blockChange.getModZ());
-        render(false);
+
+        render(RenderMode.TRANSLATION);
     }
 
     public boolean drawBlock(int x, int y, int z, boolean isRedraw) {
@@ -397,14 +423,14 @@ public class TestFrameMap extends MapDisplay {
         }
         zoomLevelIdx = MathUtil.clamp(zoomLevelIdx + n, 0, values.length - 1);
         properties.set("zoom", values[zoomLevelIdx]);
-        this.render(true);
+        this.render(RenderMode.INITIALIZE);
     }
 
     public void rotate(int n) {
         BlockFace facing = properties.get("facing", BlockFace.NORTH_EAST);
         facing = FaceUtil.rotate(facing, n * 2);
         properties.set("facing", facing);
-        this.render(true);
+        this.render(RenderMode.INITIALIZE);
     }
 
     /**
@@ -509,6 +535,12 @@ public class TestFrameMap extends MapDisplay {
                             this.getLayer().writePixel(x, y, Maplands.getBackgroundColor());
                         }
                     }
+                }
+
+                // Store in attributes that it has finished rendering
+                if (!properties.get("finishedRendering", false)) {
+                    properties.set("finishedRendering", true);
+                    Maplands.plugin.getCache().save(this.getMapInfo().uuid, this.getLayer());
                 }
 
                 //System.out.println("RENDER TIME: " + rendertime);
