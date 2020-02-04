@@ -5,7 +5,7 @@ import org.bukkit.block.BlockFace;
 import com.bergerkiller.bukkit.common.bases.IntVector3;
 import com.bergerkiller.bukkit.common.map.MapColorPalette;
 import com.bergerkiller.bukkit.common.map.MapTexture;
-import com.bergerkiller.bukkit.common.map.util.Matrix4f;
+import com.bergerkiller.bukkit.common.math.Matrix4x4;
 import com.bergerkiller.bukkit.common.utils.FaceUtil;
 import com.bergerkiller.bukkit.common.utils.MathUtil;
 
@@ -171,8 +171,8 @@ public enum ZoomLevel {
         return this.mask;
     }
 
-    public Matrix4f getTransform(BlockFace facing) {
-        Matrix4f transform = new Matrix4f();
+    public Matrix4x4 getTransform(BlockFace facing) {
+        Matrix4x4 transform = new Matrix4x4();
         transform.translate((float) (width / (16.0 * MathUtil.HALFROOTOFTWO)), 0, this.dz);
 
         float scale_w = (float) width / 20.0f;

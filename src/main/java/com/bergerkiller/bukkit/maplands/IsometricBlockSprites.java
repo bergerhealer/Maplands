@@ -10,8 +10,8 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 
 import com.bergerkiller.bukkit.common.map.MapTexture;
-import com.bergerkiller.bukkit.common.map.util.Matrix4f;
-import com.bergerkiller.bukkit.common.map.util.Vector3f;
+import com.bergerkiller.bukkit.common.math.Matrix4x4;
+import com.bergerkiller.bukkit.common.math.Vector3;
 import com.bergerkiller.bukkit.common.wrappers.BlockData;
 import com.bergerkiller.bukkit.common.wrappers.BlockRenderOptions;
 
@@ -22,7 +22,7 @@ public class IsometricBlockSprites {
     private final HashMap<BlockRenderOptions, MapTexture> spriteCache = new HashMap<BlockRenderOptions, MapTexture>();
     private final BlockFace facing;
     private final ZoomLevel zoom;
-    private final Matrix4f transform;
+    private final Matrix4x4 transform;
     public final int width;
     public final int height;
     public final MapTexture AIR;
@@ -64,7 +64,7 @@ public class IsometricBlockSprites {
             result = MapTexture.createEmpty(this.width, this.height);
 
             //map.fill(MapColorPalette.COLOR_RED);
-            result.setLightOptions(0.2f, 0.8f, new Vector3f(-1.0f, 1.0f, -1.0f));
+            result.setLightOptions(0.2f, 0.8f, new Vector3(-1.0f, 1.0f, -1.0f));
             result.drawModel(Maplands.getResourcePack().getBlockModel(options), this.transform);
 
             spriteCache.put(options, result);
