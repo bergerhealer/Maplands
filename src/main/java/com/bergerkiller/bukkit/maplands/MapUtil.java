@@ -9,21 +9,21 @@ public class MapUtil {
     /**
      * Checks whether a particular set of tile coordinates if a valid tile
      * 
-     * @param tx
-     * @param ty
-     * @param tz
+     * @param tx x-coordinate
+     * @param tz y-coordinate
+     * @param ty depth
      * @return True if the coordinates represent a valid tile
      */
     public static boolean isTile(int tx, int ty, int tz) {
-        return MathUtil.floorMod((tx * 3) + (ty * 2) + (-tz * 1), 6) == 4;
+        return MathUtil.floorMod((tx * 3) + (tz * 2) + (-ty * 1), 6) == 4;
     }
 
-    private static int getTilePXZ(int px, int pz) {
+    private static int getTilePXY(int px, int py) {
         int dxz_fact;
         if ((px & 0x1) == 0x1) {
-            dxz_fact = MathUtil.floorDiv((pz + 2), 6);
+            dxz_fact = MathUtil.floorDiv((py + 2), 6);
         } else {
-            dxz_fact = MathUtil.floorDiv((pz + 5), 6);
+            dxz_fact = MathUtil.floorDiv((py + 5), 6);
         }
         return MathUtil.floorDiv(px, 2) - dxz_fact;
     }
@@ -44,8 +44,8 @@ public class MapUtil {
      * 
      * @param facing view
      * @param px tile coordinates x
-     * @param py tile coordinates y
-     * @param pz tile coordinates z
+     * @param pz tile coordinates y
+     * @param py depth
      * @return block coordinates. Null if not a valid tile.
      */
     public static IntVector3 screenTileToBlock(BlockFace facing, int px, int py, int pz) {
@@ -57,9 +57,9 @@ public class MapUtil {
         int py_div3 = MathUtil.floorDiv(py, 3);
         int pz_div3 = MathUtil.floorDiv(pz, 3);
 
-        int dx = py_div3 + getTilePXZ(px, pz);
-        int dy = -pz_div3 - py_div3;
-        int dz = dx - dy - py;
+        int dx = pz_div3 + getTilePXY(px, py);
+        int dy = -py_div3 - pz_div3;
+        int dz = dx - dy - pz;
 
         // Move to center block
         dx += 1;
@@ -96,7 +96,7 @@ public class MapUtil {
      * @param dx relative block coordinate x
      * @param dy relative block coordinate y
      * @param dz relative block coordinate z
-     * @return tile coordinates
+     * @return tile coordinates (z is depth)
      */
     public static IntVector3 blockToScreenTile(BlockFace facing, int dx, int dy, int dz) {
         // Undo facing
@@ -120,8 +120,8 @@ public class MapUtil {
         dz -= 1;
 
         // Find py using: dz = dx - dy - py
-        int py = dx - dy - dz;
-        int py_div3 = MathUtil.floorDiv(py, 3);
+        int pz = dx - dy - dz;
+        int py_div3 = MathUtil.floorDiv(pz, 3);
 
         // Find pz_div3 using: dy = -pz_div3 - py_div3
         int pz_div3 = -py_div3 - dy;
@@ -136,11 +136,11 @@ public class MapUtil {
         int pz_start = pz_div3 * 3;
         int pz_end = pz_start + 3;
         int px = px_start;
-        int pz = pz_start;
+        int py = pz_start;
         searchloop:
-        for (pz = pz_start; pz < pz_end; pz++) {
+        for (py = pz_start; py < pz_end; py++) {
             for (px = px_start; px <= px_end; px++) {
-                if (isTile(px, py, pz) && getTilePXZ(px, pz) == tilePXZ) {
+                if (isTile(px, py, pz) && getTilePXY(px, py) == tilePXZ) {
                     break searchloop;
                 }
             }

@@ -139,7 +139,7 @@ public class Maplands extends PluginBase {
             return true;
         }
 
-        ItemStack item = MapDisplay.createMapItem(TestFrameMap.class);
+        ItemStack item = MapDisplay.createMapItem(MaplandsDisplay.class);
         player.getInventory().addItem(item);
 
         sender.sendMessage("Given Maplands map item");

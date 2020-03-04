@@ -27,10 +27,10 @@ public class TestSprites {
         ZoomLevel zoom = ZoomLevel.ZOOM4;
         MapTexture map = MapTexture.createEmpty((int) (2.0 * zoom.getWidth()) + 2, (int) (2.5 * zoom.getHeight()) + 2);
 
-        map.draw(zoom.getMask(), zoom.getDrawX(2) + 1, zoom.getDrawZ(3) + 1, MapColorPalette.COLOR_BLUE);
-        map.draw(zoom.getMask(), zoom.getDrawX(1) + 1, zoom.getDrawZ(6) + 2, MapColorPalette.COLOR_RED);
-        map.draw(zoom.getMask(), zoom.getDrawX(3) + 1, zoom.getDrawZ(6) + 2, MapColorPalette.COLOR_GREEN);
-        map.draw(zoom.getMask(), zoom.getDrawX(2) + 1, zoom.getDrawZ(9) + 3, MapColorPalette.COLOR_YELLOW);
+        map.draw(zoom.getMask(), zoom.getDrawX(2) + 1, zoom.getDrawY(3) + 1, MapColorPalette.COLOR_BLUE);
+        map.draw(zoom.getMask(), zoom.getDrawX(1) + 1, zoom.getDrawY(6) + 2, MapColorPalette.COLOR_RED);
+        map.draw(zoom.getMask(), zoom.getDrawX(3) + 1, zoom.getDrawY(6) + 2, MapColorPalette.COLOR_GREEN);
+        map.draw(zoom.getMask(), zoom.getDrawX(2) + 1, zoom.getDrawY(9) + 3, MapColorPalette.COLOR_YELLOW);
 
         MapDebugWindow.showMapForever(map, 800 / map.getHeight());
     }
@@ -74,10 +74,10 @@ public class TestSprites {
         ZoomLevel zoom = sprite.getZoom();
 
         map.setRelativeBrushMask(zoom.getMask());
-        map.draw(sprite.getSprite(material), zoom.getDrawX(x), zoom.getDrawZ(z));
+        map.draw(sprite.getSprite(material), zoom.getDrawX(x), zoom.getDrawY(z));
         //map.fillRectangle(zoom.getDrawX(x), zoom.getDrawZ(z), zoom.getWidth(), zoom.getHeight(), (byte) (4 + rand.nextInt(100)));
         map.setRelativeBrushMask(null);
 
-        map.fillRectangle(zoom.getScreenX(x) - 1, zoom.getScreenZ(z) - 1, 2, 2, MapColorPalette.COLOR_BLUE);
+        map.fillRectangle(zoom.getScreenX(x) - 1, zoom.getScreenY(z) - 1, 2, 2, MapColorPalette.COLOR_BLUE);
     }
 }

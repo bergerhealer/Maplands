@@ -16,7 +16,7 @@ public class MaplandsListener implements Listener {
         int bx = event.getBlock().getX();
         int by = event.getBlock().getY();
         int bz = event.getBlock().getZ();
-        for (TestFrameMap display : TestFrameMap.getAllDisplays()) {
+        for (MaplandsDisplay display : MaplandsDisplay.getAllDisplays()) {
             if (display.isRenderingWorld(world)) {
                 display.onBlockChange(world, bx+1, by, bz);
                 display.onBlockChange(world, bx, by+1, bz);
@@ -31,7 +31,7 @@ public class MaplandsListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onBlockRedstone(BlockRedstoneEvent event) {
-        for (TestFrameMap display : TestFrameMap.getAllDisplays()) {
+        for (MaplandsDisplay display : MaplandsDisplay.getAllDisplays()) {
             display.onBlockChange(event.getBlock());
         }
     }
@@ -39,7 +39,7 @@ public class MaplandsListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onBlockInteracted(PlayerInteractEvent event) {
         if (event.getClickedBlock() != null) {
-            for (TestFrameMap display : TestFrameMap.getAllDisplays()) {
+            for (MaplandsDisplay display : MaplandsDisplay.getAllDisplays()) {
                 display.onBlockChange(event.getClickedBlock());
             }
         }

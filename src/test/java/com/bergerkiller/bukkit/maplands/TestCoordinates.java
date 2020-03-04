@@ -37,9 +37,9 @@ public class TestCoordinates {
     @Test
     public void testTileScreenConversion() {
         ZoomLevel zoom = ZoomLevel.DEFAULT;
-        for (int x = 0; x < 50; x++) {
-            for (int y = 0; y < 100; y++) {
-                for (int z = 0; z < 50; z++) {
+        for (int x = -40; x < 40; x++) {
+            for (int y = -40; y < 40; y++) {
+                for (int z = -100; z < 100; z++) {
                     if (!MapUtil.isTile(x, y, z)) {
                         continue;
                     }
