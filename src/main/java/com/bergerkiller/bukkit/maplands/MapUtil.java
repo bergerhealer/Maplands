@@ -10,8 +10,8 @@ public class MapUtil {
      * Checks whether a particular set of tile coordinates if a valid tile
      * 
      * @param tx x-coordinate
-     * @param tz y-coordinate
-     * @param ty depth
+     * @param ty y-coordinate
+     * @param tz depth
      * @return True if the coordinates represent a valid tile
      */
     public static boolean isTile(int tx, int ty, int tz) {
@@ -43,9 +43,9 @@ public class MapUtil {
      * Performs a mathematical operation to turn tile coordinates into block coordinates
      * 
      * @param facing view
-     * @param px tile coordinates x
-     * @param pz tile coordinates y
-     * @param py depth
+     * @param px tile x-coordinate
+     * @param py tile y-coordinate
+     * @param pz depth
      * @return block coordinates. Null if not a valid tile.
      */
     public static IntVector3 screenTileToBlock(BlockFace facing, int px, int py, int pz) {
