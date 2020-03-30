@@ -107,8 +107,6 @@ public class Maplands extends PluginBase {
 
 	    this.register(new MaplandsListener());
 
-	    this.loadPermissions(Permission.class);
-
 	    try {
 	        resourcePack.load();
 	    } catch (NoSuchMethodError e) {
@@ -121,6 +119,11 @@ public class Maplands extends PluginBase {
 	    plugin = null;
 	    resourcePack = null;
 	}
+
+    @Override
+    public void permissions() {
+        this.loadPermissions(Permission.class);
+    }
 
     @Override
     public int getMinimumLibVersion() {
