@@ -8,6 +8,7 @@ depend: [BKCommonLib]
 metrics: true
 dev-url: ${project.url}
 commands:
-    map:
-        description: map stuff
-        usage: idunno lol
+    maplands:
+        aliases: [map]
+        description: Gives access to the maplands map item
+        usage: /map or /map give [playername]
