@@ -3,6 +3,7 @@ package com.bergerkiller.bukkit.maplands;
 import java.util.Locale;
 import java.util.logging.Level;
 
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -132,8 +133,41 @@ public class Maplands extends PluginBase {
 
     @Override
     public boolean command(CommandSender sender, String command, String[] args) {
+        if (args.length > 0 && args[0].equalsIgnoreCase("give")) {
+            if (!Permission.COMMAND_GIVE.has(sender)) {
+                sender.sendMessage("No permission to use this give command!");
+                return true;
+            }
+
+            // The /map give [playernames...] command
+            if (args.length == 1) {
+                sender.sendMessage("Please specify the names of players to give the maplands map item to");
+                sender.sendMessage("/map give [playername] [playername2...]");
+                return true;
+            }
+
+            // Give to all players by name
+            for (int i = 1; i < args.length; i++) {
+                String playerName = args[i];
+                Player player = Bukkit.getPlayer(playerName);
+                if (player == null) {
+                    sender.sendMessage("Player '" + playerName + "' is not online");
+                    continue;
+                }
+
+                ItemStack item = MapDisplay.createMapItem(MaplandsDisplay.class);
+                player.getInventory().addItem(item);
+            }
+
+            // Closing message
+            sender.sendMessage("The players were given the Maplands item");
+            return true;
+        }
+
+        // Default /map command
         if (!(sender instanceof Player)) {
-            return false;
+            sender.sendMessage("This command is only for players. Use /map give [playername] instead");
+            return true;
         }
 
         Player player = (Player) sender;
