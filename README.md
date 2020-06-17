@@ -3,8 +3,8 @@
 [BKCommonLib]: https://www.spigotmc.org/resources/39590/
 [issues]: https://github.com/bergerhealer/Maplands/issues
 
-[imgPreview]: https://www.spigotmc.org/attachments/maplands_demo-jpg.277704/
-[imgControl]: https://www.spigotmc.org/attachments/held_map_ui-png.279691/
+[imgPreview]: https://user-images.githubusercontent.com/11576465/84956541-bb10b100-b0f9-11ea-95ba-0de01ea225cb.png
+[imgControl]: https://user-images.githubusercontent.com/11576465/84956444-843a9b00-b0f9-11ea-9e2f-81d478f170d1.png
 
 # Maplands
 [Spigot page][spigot] | [Dev Builds][Jenkins]
