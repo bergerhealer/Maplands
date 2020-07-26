@@ -110,8 +110,12 @@ public class MapCanvasCache {
         if (!_enabled) {
             return;
         }
+        BufferedImage depthImage = depthToGrayscaleImage(canvas);
+        if (depthImage == null) {
+            return;
+        }
         synchronized (_saveTask) {
-            _cache.put(mapUUID, new Item(toJavaImageIndexed(canvas), depthToGrayscaleImage(canvas)));
+            _cache.put(mapUUID, new Item(toJavaImageIndexed(canvas), depthImage));
             _saveTask.notify();
             if (!_saveTask.isRunning()) {
                 _saveTask.start();
@@ -192,6 +196,10 @@ public class MapCanvasCache {
     // Turns the depth buffer into a 16-bit grayscale image
     public static BufferedImage depthToGrayscaleImage(MapCanvas canvas) {
         short[] depth = canvas.getDepthBuffer();
+        if (depth == null) {
+            return null;
+        }
+
         int width = canvas.getWidth();
         int height = canvas.getHeight();
         DataBufferUShort dataBuffer = new DataBufferUShort(depth, depth.length);
