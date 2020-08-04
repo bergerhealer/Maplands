@@ -4,7 +4,7 @@
 
   <groupId>com.bergerkiller.bukkit</groupId>
   <artifactId>Maplands</artifactId>
-  <version>0.8</version>
+  <version>0.9-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>Maplands</name>
@@ -12,8 +12,8 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.serverversion>1.12.1-R0.1</project.serverversion>
-    <project.bkcversion>1.14.4-v1</project.bkcversion>
+    <project.serverversion>1.16.1-R0.1</project.serverversion>
+    <project.bkcversion>1.16.1-v1</project.bkcversion>
     <junit.version>4.11</junit.version>
   </properties>
 
@@ -40,16 +40,13 @@
     </dependency>
 
     <!-- SpigotMC is only used when testing -->
-    <!--
     <dependency>
       <groupId>org.spigotmc</groupId>
       <artifactId>spigot</artifactId>
       <version>${project.serverversion}-SNAPSHOT</version>
-      <systemPath>${project.basedir}/../BKCommonLib/lib/org/spigotmc/spigot/1.12.1-R0.1-SNAPSHOT/spigot-1.12.1-R0.1-SNAPSHOT.jar</systemPath>
-      <scope>system</scope>
+      <scope>test</scope>
       <optional>true</optional>
     </dependency>
-    -->
 
     <dependency>
       <groupId>com.bergerkiller.bukkit</groupId>

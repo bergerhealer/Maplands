@@ -24,8 +24,8 @@ public class TestSprites {
     @Ignore
     @Test
     public void testZoomMask() {
-        ZoomLevel zoom = ZoomLevel.ZOOM4;
-        MapTexture map = MapTexture.createEmpty((int) (2.0 * zoom.getWidth()) + 2, (int) (2.5 * zoom.getHeight()) + 2);
+        ZoomLevel zoom = ZoomLevel.ZOOM2;
+        MapTexture map = MapTexture.createEmpty((int) (2.0 * zoom.getWidth()) + 2, (int) (2.5 * zoom.getHeight()) + 3);
 
         map.draw(zoom.getMask(), zoom.getDrawX(2) + 1, zoom.getDrawY(3) + 1, MapColorPalette.COLOR_BLUE);
         map.draw(zoom.getMask(), zoom.getDrawX(1) + 1, zoom.getDrawY(6) + 2, MapColorPalette.COLOR_RED);
@@ -38,9 +38,9 @@ public class TestSprites {
     @Ignore
     @Test
     public void testSprites() {
-        ZoomLevel zoom = ZoomLevel.ZOOM64;
-        Material mat1 = Material.GRASS;
-        Material mat2 = Material.SUGAR_CANE_BLOCK;
+        ZoomLevel zoom = ZoomLevel.ZOOM2;
+        Material mat1 = Material.CHEST;
+        Material mat2 = Material.BIRCH_LOG;
         MapTexture map = MapTexture.createEmpty(6 * zoom.getWidth(), 4 * zoom.getHeight());
         sprites = new IsometricBlockSprites[] {
                 IsometricBlockSprites.getSprites(BlockFace.NORTH_EAST, zoom),
@@ -78,6 +78,6 @@ public class TestSprites {
         //map.fillRectangle(zoom.getDrawX(x), zoom.getDrawZ(z), zoom.getWidth(), zoom.getHeight(), (byte) (4 + rand.nextInt(100)));
         map.setRelativeBrushMask(null);
 
-        map.fillRectangle(zoom.getScreenX(x) - 1, zoom.getScreenY(z) - 1, 2, 2, MapColorPalette.COLOR_BLUE);
+        //map.fillRectangle(zoom.getScreenX(x) - 1, zoom.getScreenY(z) - 1, 2, 2, MapColorPalette.COLOR_BLUE);
     }
 }
