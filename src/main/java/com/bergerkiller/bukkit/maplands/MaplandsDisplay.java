@@ -10,6 +10,7 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
+import org.bukkit.util.Vector;
 
 import com.bergerkiller.bukkit.common.Task;
 import com.bergerkiller.bukkit.common.bases.IntVector3;
@@ -19,18 +20,23 @@ import com.bergerkiller.bukkit.common.map.MapBlendMode;
 import com.bergerkiller.bukkit.common.map.MapCanvas;
 import com.bergerkiller.bukkit.common.map.MapColorPalette;
 import com.bergerkiller.bukkit.common.map.MapDisplay;
+import com.bergerkiller.bukkit.common.map.MapDisplayProperties;
 import com.bergerkiller.bukkit.common.map.MapSessionMode;
 import com.bergerkiller.bukkit.common.map.MapTexture;
+import com.bergerkiller.bukkit.common.math.Vector2;
 import com.bergerkiller.bukkit.common.map.MapPlayerInput.Key;
 import com.bergerkiller.bukkit.common.utils.FaceUtil;
 import com.bergerkiller.bukkit.common.utils.MathUtil;
 import com.bergerkiller.bukkit.common.utils.WorldUtil;
+import com.bergerkiller.bukkit.maplands.markers.MapMarkers;
+import com.bergerkiller.bukkit.maplands.menu.MenuButton;
 
 /**
  * Main display class of Maplands. Renders the world on the map and provides
  * a UI menu. Makes use of the Canvas depth buffer capabilities to do the sprite rendering.
  */
 public class MaplandsDisplay extends MapDisplay {
+    private final MapMarkers mapMarkers = new MapMarkers(this);
     private IsometricBlockSprites sprites;
     private MapTexture testSprite;
     private ZoomLevel zoom;
@@ -56,24 +62,29 @@ public class MaplandsDisplay extends MapDisplay {
     public void onAttached() {
         this.getLayer().fill(Maplands.getBackgroundColor());
         this.menuButtons = new MenuButton[] {
-                new MenuButton("zoom_in", 0, 0) {
+                new MenuButton("zoom_in", 1, 1) {
                     public void onPressed() {
                         zoom(1);
                     }
                 },
-                new MenuButton("zoom_out", 32, 0) {
+                new MenuButton("zoom_out", 26, 1) {
                     public void onPressed() {
                         zoom(-1);
                     }
                 },
-                new MenuButton("rotate_left", 64, 0) {
+                new MenuButton("rotate_left", 51, 1) {
                     public void onPressed() {
                         rotate(1);
                     }
                 },
-                new MenuButton("rotate_right", 96, 0) {
+                new MenuButton("rotate_right", 76, 1) {
                     public void onPressed() {
                         rotate(-1);
+                    }
+                },
+                new MenuButton("marker", 102, 1) {
+                    public void onPressed() {
+                        mapMarkers.showMenu();
                     }
                 }
         };
@@ -82,11 +93,12 @@ public class MaplandsDisplay extends MapDisplay {
             button.setDisplay(this);
         }
 
+        this.mapMarkers.load();
+
         // Overwrite old sprites
         getLayer().setBlendMode(MapBlendMode.NONE);
 
         this.setSessionMode(MapSessionMode.FOREVER); // VIEWING for debug, FOREVER for release
-        this.setReceiveInputWhenHolding(true);
 
         // Load from cache if possible
         if (Maplands.plugin.getCache().load(this.getMapInfo().uuid, this.getLayer())) {
@@ -104,6 +116,10 @@ public class MaplandsDisplay extends MapDisplay {
 
         // Save our current state to disk
         Maplands.plugin.getCache().save(this.getMapInfo().uuid, this.getLayer());
+    }
+
+    public MapDisplayProperties getProperties() {
+        return super.properties;
     }
 
     private static enum RenderMode {
@@ -223,9 +239,18 @@ public class MaplandsDisplay extends MapDisplay {
         }
     }
 
+    private void updateCheckHolding() {
+        for (Player owner : this.getOwners()) {
+            this.setReceiveInput(owner, this.isControlling(owner)  && !owner.isSneaking() && Permission.CHANGE_MAP.has(owner));
+        }
+    }
+
     @Override
     public void onKeyPressed(MapKeyEvent event) {
-        if (this.menuShowTicks > 0) {
+        if (this.getRootWidget().getWidgetCount() > 0) {
+            // Menu widget is opened, do nothing with these keys
+            super.onKeyPressed(event);
+        } else if (this.menuShowTicks > 0) {
             this.showMenu(); // keep on while interacted
 
             // Menu is shown. Intercepts keys.
@@ -490,6 +515,34 @@ public class MaplandsDisplay extends MapDisplay {
     }
 
     /**
+     * Looks up the tile of the block at a given position, and using this tile what the exact
+     * pixel coordinates on the screen are for this position. Sub-pixel information is
+     * retained.
+     * 
+     * @param position World coordinates of the position to compute
+     * @return pixel coordinates on the screen, z is depth level
+     */
+    public Vector getScreenCoordinates(Vector position) {
+        int bx = position.getBlockX() - this.startBlock.getX();
+        int by = position.getBlockY() - this.startBlock.getY();
+        int bz = position.getBlockZ() - this.startBlock.getZ();
+        IntVector3 tile = MapUtil.blockToScreenTile(this.facing, bx, by, bz);
+        if (tile == null) {
+            return new Vector();
+        }
+        double sx = sprites.getZoom().getScreenX(tile.x) + (this.getWidth() >> 1);
+        double sy = sprites.getZoom().getScreenY(tile.y) + (this.getHeight() >> 1);
+
+        // Adjust for within-block coordinates
+        Vector2 inBlock = sprites.getZoom().getBlockPixelCoordinates(this.facing,
+                position.getX() - position.getBlockX() - 0.5,
+                position.getY() - position.getBlockY() - 0.5,
+                position.getZ() - position.getBlockZ() - 0.5);
+
+        return new Vector(sx + inBlock.x, sy + inBlock.y, tile.z);
+    }
+
+    /**
      * Gets the exact block displayed at particular pixel coordinates
      * 
      * @param x - pixel coordinate (horizontal)
@@ -545,6 +598,13 @@ public class MaplandsDisplay extends MapDisplay {
         for (MenuButton button : this.menuButtons) {
             button.onTick();
         }
+
+        // Receive player input from players holding the map in the main hand,
+        // that are not sneaking and have permission to edit
+        updateCheckHolding();
+
+        // Refresh displayed markers
+        this.mapMarkers.update();
 
         // Re-render all dirty tiles
         // If they result in holes, schedule the area behind for re-rendering

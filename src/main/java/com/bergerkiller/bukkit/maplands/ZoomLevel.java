@@ -6,6 +6,7 @@ import com.bergerkiller.bukkit.common.bases.IntVector3;
 import com.bergerkiller.bukkit.common.map.MapColorPalette;
 import com.bergerkiller.bukkit.common.map.MapTexture;
 import com.bergerkiller.bukkit.common.math.Matrix4x4;
+import com.bergerkiller.bukkit.common.math.Vector2;
 import com.bergerkiller.bukkit.common.utils.FaceUtil;
 import com.bergerkiller.bukkit.common.utils.MathUtil;
 
@@ -87,6 +88,24 @@ public enum ZoomLevel {
         return this.rows;
     }
     */
+
+    /**
+     * Gets the delta change in screen x-coordinates with every tile step
+     * 
+     * @return tile x step
+     */
+    public final double getTileStepX() {
+        return this.step_x;
+    }
+
+    /**
+     * Gets the delta change in screen y-coordinates with every tile step
+     * 
+     * @return tile y step
+     */
+    public final double getTileStepY() {
+        return (double) this.step_y / (double) this.step_y_div;
+    }
 
     /**
      * Gets the x-position of the middle of a certain tile as drawn on the screen
@@ -206,6 +225,33 @@ public enum ZoomLevel {
         transform.translate(-8, -8, -8);
 
         return transform;
+    }
+
+    /**
+     * Calculates the pixel coordinates of an area inside a 1x1x1 block.
+     * 
+     * @param facing
+     * @param dx - Delta x-coordinate within the block, relative to 0.5
+     * @param dy - Delta y-coordinate within the block, relative to 0.5
+     * @param dz - Delta z-coordinate within the block, relative to 0.5
+     * @return exact pixel coordinates
+     */
+    public Vector2 getBlockPixelCoordinates(BlockFace facing, double dx, double dy, double dz) {
+        double x = 0.0;
+        double y = 0.0;
+
+        // Adjust for the y-coordinate, is always the same offset regardless of facing
+        y -= 2.0 * getTileStepY() * dy;
+
+        // Adjust for the x-coordinate, which has a factor for both x and y
+        x -= (double) facing.getModZ() * getTileStepX() * dx;
+        y -= (double) facing.getModX() * getTileStepY() * dx;
+
+        // Adjust for the z-coordinate, which has a factor for both x and y
+        x += (double) facing.getModX() * getTileStepX() * dz;
+        y -= (double) facing.getModZ() * getTileStepY() * dz;
+
+        return new Vector2(x, y);
     }
 
     private static MapTexture createMask(int width, int height) {

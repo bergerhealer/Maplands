@@ -1,4 +1,4 @@
-package com.bergerkiller.bukkit.maplands;
+package com.bergerkiller.bukkit.maplands.menu;
 
 import com.bergerkiller.bukkit.common.map.MapColorPalette;
 import com.bergerkiller.bukkit.common.map.MapDisplay;
