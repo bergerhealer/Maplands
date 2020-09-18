@@ -23,6 +23,8 @@ public abstract class MapMarkerTypeSelector extends MapWidget {
     private final List<MapMarker.Type> types = MapMarker.Type.values();
     private int typeIndex = -1;
     private MarkerList list = null;
+    private boolean markersHidden = false;
+    public final MapWidgetTooltip tooltip = new MapWidgetTooltip();
 
     /**
      * Called when the type is changed inside the selector
@@ -32,10 +34,16 @@ public abstract class MapMarkerTypeSelector extends MapWidget {
     public MapMarkerTypeSelector() {
         this.setSize(10, 10);
         this.setFocusable(true);
+        this.tooltip.setText("Marker Type");
     }
 
     public MapMarker.Type getType() {
         return type;
+    }
+
+    public MapMarkerTypeSelector setTooltip(String tooltipText) {
+        this.tooltip.setText(tooltipText);
+        return this;
     }
 
     public MapMarkerTypeSelector setType(MapMarker.Type type) {
@@ -60,6 +68,17 @@ public abstract class MapMarkerTypeSelector extends MapWidget {
         return this;
     }
 
+    public void setMarkersHidden(boolean hidden) {
+        if (markersHidden != hidden) {
+            markersHidden = hidden;
+            if (hidden) {
+                onDetached();
+            } else {
+                onAttached();
+            }
+        }
+    }
+
     @Override
     public void onAttached() {
         previewMarker = display.createMarker();
@@ -81,8 +100,10 @@ public abstract class MapMarkerTypeSelector extends MapWidget {
     @Override
     public void onDraw() {
         if (this.isFocused() || this.isActivated()) {
+            view.fillRectangle(1, 1, getWidth()-2, getHeight()-2, MapColorPalette.getColor(150, 64, 64));
             view.drawRectangle(0, 0, getWidth(), getHeight(), MapColorPalette.COLOR_RED);
         } else {
+            view.fillRectangle(1, 1, getWidth()-2, getHeight()-2, MapColorPalette.getColor(100, 100, 100));
             view.drawRectangle(0, 0, getWidth(), getHeight(), MapColorPalette.COLOR_BLACK);
         }
         if (this.type == null) {
@@ -98,6 +119,8 @@ public abstract class MapMarkerTypeSelector extends MapWidget {
     public void onActivate() {
         if (list == null) {
             list = this.addWidget(new MarkerList());
+            this.removeWidget(this.tooltip);
+            display.playSound(SoundEffect.PISTON_CONTRACT);
         }
     }
 
@@ -112,6 +135,8 @@ public abstract class MapMarkerTypeSelector extends MapWidget {
             event.getKey() == MapPlayerInput.Key.ENTER)
         {
             this.removeWidget(list);
+            this.addWidget(this.tooltip);
+            display.playSound(SoundEffect.PISTON_EXTEND);
             list = null;
         } else if (event.getKey() == MapPlayerInput.Key.UP) {
             if (typeIndex == 0) {
@@ -126,7 +151,29 @@ public abstract class MapMarkerTypeSelector extends MapWidget {
                 setType(types.get(typeIndex+1));
                 display.playSound(SoundEffect.CLICK);
             }
+        } else {
+            // Left/right pressed exits the menu and then allows for navigation
+            this.removeWidget(list);
+            this.addWidget(this.tooltip);
+            list = null;
+            super.onKeyPressed(event);
         }
+    }
+
+    @Override
+    public void onFocus() {
+        super.onFocus();
+
+        this.addWidget(this.tooltip);
+
+        // Click navigation sounds
+        display.playSound(SoundEffect.CLICK_WOOD);
+    }
+
+    @Override
+    public void onBlur() {
+        super.onBlur();
+        this.removeWidget(this.tooltip);
     }
 
     // Shows 2 additional markers above and below the marker
@@ -175,7 +222,12 @@ public abstract class MapMarkerTypeSelector extends MapWidget {
 
         @Override
         public void onDraw() {
+            byte bg_color = MapColorPalette.getColor(80, 80, 80);
+            int half = getHeight()/2;
+
             view.drawRectangle(0, 0, getWidth(), getHeight(), MapColorPalette.COLOR_BLACK);
+            view.fillRectangle(1, 1, getWidth()-2, half - 6, bg_color);
+            view.fillRectangle(1, half+5, getWidth()-2, half - 6, bg_color);
 
             if (typeIndex == 0) {
                 view.draw(NO_MARKER, 1, 10);

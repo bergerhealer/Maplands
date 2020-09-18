@@ -209,6 +209,10 @@ public class MaplandsDisplay extends MapDisplay {
         return this.startBlock.getWorld() == world;
     }
 
+    public boolean isBlockWithinBounds(int bx, int by, int bz) {
+        return this.blockBounds.contains(bx, by, bz);
+    }
+
     public void onBlockChange(Block block) {
         onBlockChange(block.getWorld(), block.getX(), block.getY(), block.getZ());
     }
@@ -349,6 +353,7 @@ public class MaplandsDisplay extends MapDisplay {
         // Re-render with the changed block position
         properties.set("px", properties.get("px", 0) + blockChange.getModX());
         properties.set("pz", properties.get("pz", 0) + blockChange.getModZ());
+        mapMarkers.viewChanged();
 
         render(RenderMode.TRANSLATION);
     }
@@ -469,6 +474,7 @@ public class MaplandsDisplay extends MapDisplay {
         }
         zoomLevelIdx = MathUtil.clamp(zoomLevelIdx + n, 0, values.length - 1);
         properties.set("zoom", values[zoomLevelIdx]);
+        mapMarkers.viewChanged();
         this.render(RenderMode.INITIALIZE);
     }
 
@@ -476,6 +482,7 @@ public class MaplandsDisplay extends MapDisplay {
         BlockFace facing = properties.get("facing", BlockFace.NORTH_EAST);
         facing = FaceUtil.rotate(facing, n * 2);
         properties.set("facing", facing);
+        mapMarkers.viewChanged();
         this.render(RenderMode.INITIALIZE);
     }
 
