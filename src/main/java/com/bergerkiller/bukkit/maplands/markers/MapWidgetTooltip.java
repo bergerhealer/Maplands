@@ -13,9 +13,19 @@ import com.bergerkiller.bukkit.common.utils.LogicUtil;
  */
 public class MapWidgetTooltip extends MapWidget {
     private String _text = null;
+    private boolean preferOnTop = false;
 
     public MapWidgetTooltip() {
         this.setDepthOffset(2);
+    }
+
+    public MapWidgetTooltip setPreferAbove(boolean prefer) {
+        if (this.preferOnTop != prefer) {
+            this.preferOnTop = prefer;
+            this.invalidate();
+            this.calcBounds();
+        }
+        return this;
     }
 
     public MapWidgetTooltip setText(String text) {
@@ -64,7 +74,7 @@ public class MapWidgetTooltip extends MapWidget {
         // Above or below the parent widget?
         int parent_x = parent.getAbsoluteX();
         int parent_y = parent.getAbsoluteY();
-        if (textSize.getHeight() > (128 - (parent_y+parent.getHeight()))) {
+        if (preferOnTop) {
             // Above
             pos_y = parent_y - (int) textSize.getHeight();
         } else {

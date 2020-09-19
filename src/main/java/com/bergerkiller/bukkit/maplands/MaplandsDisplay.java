@@ -166,6 +166,9 @@ public class MaplandsDisplay extends MapDisplay {
         }
         this.getLayer().setRelativeBrushMask(this.sprites.getBrushTexture());
 
+        // Requires updated facing/startblock/zoom info to work right
+        mapMarkers.viewChanged();
+
         int nrColumns = this.sprites.getZoom().getNumberOfColumns(this.getWidth());
         int nrRows = this.sprites.getZoom().getNumberOfRows(this.getHeight());
         this.minCols = -nrColumns;
@@ -255,7 +258,7 @@ public class MaplandsDisplay extends MapDisplay {
             // Menu widget is opened, do nothing with these keys
             super.onKeyPressed(event);
         } else if (this.menuShowTicks > 0) {
-            this.showMenu(); // keep on while interacted
+            menuShowTicks = MENU_DURATION; // keep on while interacted
 
             // Menu is shown. Intercepts keys.
             if (event.getKey() == Key.LEFT) {
@@ -271,24 +274,20 @@ public class MaplandsDisplay extends MapDisplay {
                 // Hide menu again
                 this.hideMenu();
             }
-            
+
         } else if (event.getKey() == Key.BACK) {
             // Show menu
             this.showMenu();
         } else {
             // No menu is shown. Simple navigation.
             if (event.getKey() == Key.UP) {
-                BlockFace facing_fwd = facing;
-                moveTiles(0, 2, facing_fwd);
+                moveStartBlock(facing, 1);
             } else if (event.getKey() == Key.RIGHT) {
-                BlockFace facing_rgt = FaceUtil.rotate(facing, 2);
-                moveTiles(-2, 0, facing_rgt);
+                moveStartBlock(FaceUtil.rotate(facing, 2), 1);
             } else if (event.getKey() == Key.DOWN) {
-                BlockFace facing_bwd = FaceUtil.rotate(facing, 4);
-                moveTiles(0, -2, facing_bwd);
+                moveStartBlock(FaceUtil.rotate(facing, 4), 1);
             } else if (event.getKey() == Key.LEFT) {
-                BlockFace facing_lft = FaceUtil.rotate(facing, 6);
-                moveTiles(2, 0, facing_lft);
+                moveStartBlock(FaceUtil.rotate(facing, 6), 1);
             }
 
             if (event.getKey() == Key.ENTER) {
@@ -296,66 +295,6 @@ public class MaplandsDisplay extends MapDisplay {
                 this.render(RenderMode.INITIALIZE);
             }
         }
-    }
-
-    public void moveTiles(int dtx, int dty, BlockFace blockChange) {
-        // Move all pixels
-        getLayer().movePixels(
-                zoom.getScreenX(dtx) - zoom.getScreenX(0),
-                zoom.getScreenY(dty) - zoom.getScreenY(0)
-        );
-
-        // Transform the "have we drawn this tile?" buffer with the same movement
-        // Shorten the direction moved away from, since some of those blocks were only partially drawn
-        // They will have to be fully re-drawn to draw the cut-off portion
-        int fMinCols = this.minCols;
-        int fMaxCols = this.maxCols;
-        int fMinRows = this.minRows;
-        int fMaxRows = this.maxRows;
-        if (dtx > 0) {
-            fMinCols += dtx + 1;
-        } else if (dtx < 0) {
-            fMaxCols += dtx - 1;
-        }
-        if (dty > 0) {
-            fMinRows += dty + 7;
-        } else if (dty < 0) {
-            fMaxRows += dty - 5;
-        }
-
-        boolean[] newDrawnTiles = new boolean[this.drawnTiles.length];
-        int tileIdx = -1;
-        for (int y = this.minRows; y <= this.maxRows; y++) {
-            for (int x = this.minCols; x <= this.maxCols; x++) {
-                tileIdx++;
-                boolean value = this.drawnTiles[tileIdx];
-                int mx = x + dtx;
-                int my = y + dty;
-                if (mx >= fMinCols && mx <= fMaxCols && my >= fMinRows && my <= fMaxRows) {
-                    int index = tileIdx;
-                    index += dty * (this.maxCols - this.minCols + 1) + dtx;
-                    newDrawnTiles[index] = value;
-                }
-            }
-        }
-        this.drawnTiles = newDrawnTiles;
-
-        // When moving up or down, the depth buffer values are incremented/decremented
-        if (dty != 0) {
-            short[] buffer = this.getLayer().getDepthBuffer();
-            for (int i = 0; i < buffer.length; i++) {
-                if (buffer[i] != MapCanvas.MAX_DEPTH) {
-                    buffer[i] -= dty;
-                }
-            }
-        }
-
-        // Re-render with the changed block position
-        properties.set("px", properties.get("px", 0) + blockChange.getModX());
-        properties.set("pz", properties.get("pz", 0) + blockChange.getModZ());
-        mapMarkers.viewChanged();
-
-        render(RenderMode.TRANSLATION);
     }
 
     private int getLight(int x, int y, int z) {
@@ -474,7 +413,6 @@ public class MaplandsDisplay extends MapDisplay {
         }
         zoomLevelIdx = MathUtil.clamp(zoomLevelIdx + n, 0, values.length - 1);
         properties.set("zoom", values[zoomLevelIdx]);
-        mapMarkers.viewChanged();
         this.render(RenderMode.INITIALIZE);
     }
 
@@ -482,7 +420,6 @@ public class MaplandsDisplay extends MapDisplay {
         BlockFace facing = properties.get("facing", BlockFace.NORTH_EAST);
         facing = FaceUtil.rotate(facing, n * 2);
         properties.set("facing", facing);
-        mapMarkers.viewChanged();
         this.render(RenderMode.INITIALIZE);
     }
 
@@ -493,6 +430,136 @@ public class MaplandsDisplay extends MapDisplay {
      */
     public Block getStartBlock() {
         return this.startBlock;
+    }
+
+    /**
+     * Sets start block coordinates and world. Performs a translation of the map if possible, otherwise
+     * re-renders the entire map.
+     * 
+     * @param bx Start block X-coordinate
+     * @param by Start block Y-coordinate
+     * @param bz Start block Z-coordinate
+     */
+    public void setStartBlock(Block block) {
+        String oldWorldName = this.properties.get("mapWorld", String.class);
+        if (oldWorldName == null || !oldWorldName.equals(block.getWorld().getName())) {
+            this.properties.set("mapWorld", block.getWorld().getName());
+            this.properties.set("px", block.getX());
+            this.properties.set("py", block.getY());
+            this.properties.set("pz", block.getZ());
+            this.render(RenderMode.INITIALIZE);
+        } else {
+            this.setStartBlock(block.getX(), block.getY(), block.getZ());
+        }
+    }
+
+    /**
+     * Sets start block coordinates. Performs a translation of the map if possible, otherwise
+     * re-renders the entire map.
+     * 
+     * @param bx Start block X-coordinate
+     * @param by Start block Y-coordinate
+     * @param bz Start block Z-coordinate
+     */
+    public void setStartBlock(int bx, int by, int bz) {
+        int old_x = this.properties.get("px", 0);
+        int old_y = this.properties.get("py", 0);
+        int old_z = this.properties.get("pz", 0);
+        moveStartBlock(bx - old_x, by - old_y, bz - old_z);
+    }
+
+    /**
+     * Moves the start block, translating the map accordingly
+     * 
+     * @param direction The direction to translate the start block
+     * @param amount Number of times to translate by direction
+     */
+    public void moveStartBlock(BlockFace direction, int amount) {
+        moveStartBlock(direction.getModX()*amount,
+                       direction.getModY()*amount,
+                       direction.getModZ()*amount);
+    }
+
+    /**
+     * Moves the start block, translating the map accordingly
+     * 
+     * @param dx Delta in start block X-coordinate
+     * @param dy Delta in start block Y-coordinate
+     * @param dz Delta in start block Z-coordinate
+     */
+    public void moveStartBlock(int dx, int dy, int dz) {
+        int old_x = this.properties.get("px", 0);
+        int old_y = this.properties.get("py", 0);
+        int old_z = this.properties.get("pz", 0);
+
+        // Update
+        this.properties.set("px", old_x + dx);
+        this.properties.set("py", old_y + dy);
+        this.properties.set("pz", old_z + dz);
+
+        IntVector3 old_tile = MapUtil.blockToScreenTile(this.facing, 0, 0, 0);
+        IntVector3 new_tile = MapUtil.blockToScreenTile(this.facing, dx, dy, dz);
+
+        int pixels_dx = zoom.getScreenX(old_tile.x) - zoom.getScreenX(new_tile.x);
+        int pixels_dy = zoom.getScreenY(old_tile.y) - zoom.getScreenY(new_tile.y);
+        if (Math.abs(pixels_dx) >= this.getWidth() || Math.abs(pixels_dy) >= this.getHeight()) {
+            // Change is so large the entire map blanks out. Just do a re-render of everything
+            this.render(RenderMode.INITIALIZE);
+        } else {
+            // Move the pixels already drawn
+            getLayer().movePixels(pixels_dx, pixels_dy);
+
+            // Delta in tiles
+            int dtx = old_tile.x - new_tile.x;
+            int dty = old_tile.y - new_tile.y;
+
+            // Transform the "have we drawn this tile?" buffer with the same movement
+            // Shorten the direction moved away from, since some of those blocks were only partially drawn
+            // They will have to be fully re-drawn to draw the cut-off portion
+            int fMinCols = this.minCols;
+            int fMaxCols = this.maxCols;
+            int fMinRows = this.minRows;
+            int fMaxRows = this.maxRows;
+            if (dtx > 0) {
+                fMinCols += dtx + 1;
+            } else if (dtx < 0) {
+                fMaxCols += dtx - 1;
+            }
+            if (dty > 0) {
+                fMinRows += dty + 7;
+            } else if (dty < 0) {
+                fMaxRows += dty - 5;
+            }
+
+            boolean[] newDrawnTiles = new boolean[this.drawnTiles.length];
+            int tileIdx = -1;
+            for (int y = this.minRows; y <= this.maxRows; y++) {
+                for (int x = this.minCols; x <= this.maxCols; x++) {
+                    tileIdx++;
+                    boolean value = this.drawnTiles[tileIdx];
+                    int mx = x + dtx;
+                    int my = y + dty;
+                    if (mx >= fMinCols && mx <= fMaxCols && my >= fMinRows && my <= fMaxRows) {
+                        int index = tileIdx;
+                        index += dty * (this.maxCols - this.minCols + 1) + dtx;
+                        newDrawnTiles[index] = value;
+                    }
+                }
+            }
+            this.drawnTiles = newDrawnTiles;
+
+            // When moving up or down, the depth buffer values are incremented/decremented
+            if (dty != 0) {
+                short[] buffer = this.getLayer().getDepthBuffer();
+                for (int i = 0; i < buffer.length; i++) {
+                    if (buffer[i] != MapCanvas.MAX_DEPTH) {
+                        buffer[i] -= dty;
+                    }
+                }
+            }
+
+            this.render(RenderMode.TRANSLATION);
+        }
     }
 
     /**
@@ -599,11 +666,18 @@ public class MaplandsDisplay extends MapDisplay {
 
     @Override
     public void onTick() {
-        if (menuShowTicks > 0 && --menuShowTicks == 0) {
-            this.hideMenu();
-        }
-        for (MenuButton button : this.menuButtons) {
-            button.onTick();
+        if (this.getRootWidget().getWidgetCount() == 0) {
+            if (menuShowTicks > 0 && --menuShowTicks == 0) {
+                this.hideMenu();
+            }
+            for (MenuButton button : this.menuButtons) {
+                button.onTick();
+            }
+        } else {
+            // While menu is active, show last selected button on continuously
+            for (MenuButton button : this.menuButtons) {
+                button.setBlinkOn();
+            }
         }
 
         // Receive player input from players holding the map in the main hand,

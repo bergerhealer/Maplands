@@ -14,7 +14,7 @@ import com.bergerkiller.bukkit.common.resources.SoundEffect;
  * Shows the marker currently selected, and when activated, shows
  * a list of markers which can be navigated to change the selection.
  */
-public abstract class MapMarkerTypeSelector extends MapWidget {
+public abstract class MapMarkerTypeSelector extends MapWidget implements MapWidgetWithMarkers {
     private static final MapTexture NO_MARKER = MapTexture.loadResource(MapMarkerTypeSelector.class,
             "/com/bergerkiller/bukkit/maplands/textures/no_marker.png");
 
@@ -41,8 +41,9 @@ public abstract class MapMarkerTypeSelector extends MapWidget {
         return type;
     }
 
-    public MapMarkerTypeSelector setTooltip(String tooltipText) {
+    public MapMarkerTypeSelector setTooltip(String tooltipText, boolean above) {
         this.tooltip.setText(tooltipText);
+        this.tooltip.setPreferAbove(above);
         return this;
     }
 
@@ -68,6 +69,7 @@ public abstract class MapMarkerTypeSelector extends MapWidget {
         return this;
     }
 
+    @Override
     public void setMarkersHidden(boolean hidden) {
         if (markersHidden != hidden) {
             markersHidden = hidden;
@@ -117,10 +119,11 @@ public abstract class MapMarkerTypeSelector extends MapWidget {
 
     @Override
     public void onActivate() {
+        super.onActivate();
         if (list == null) {
             list = this.addWidget(new MarkerList());
             this.removeWidget(this.tooltip);
-            display.playSound(SoundEffect.PISTON_CONTRACT);
+            display.playSound(SoundEffect.PISTON_EXTEND);
         }
     }
 
@@ -134,10 +137,7 @@ public abstract class MapMarkerTypeSelector extends MapWidget {
         if (event.getKey() == MapPlayerInput.Key.BACK ||
             event.getKey() == MapPlayerInput.Key.ENTER)
         {
-            this.removeWidget(list);
-            this.addWidget(this.tooltip);
-            display.playSound(SoundEffect.PISTON_EXTEND);
-            list = null;
+            closeList();
         } else if (event.getKey() == MapPlayerInput.Key.UP) {
             if (typeIndex == 0) {
                 setType(null);
@@ -153,11 +153,17 @@ public abstract class MapMarkerTypeSelector extends MapWidget {
             }
         } else {
             // Left/right pressed exits the menu and then allows for navigation
-            this.removeWidget(list);
-            this.addWidget(this.tooltip);
-            list = null;
+            closeList();
             super.onKeyPressed(event);
         }
+    }
+
+    private void closeList() {
+        this.deactivate();
+        this.removeWidget(list);
+        this.addWidget(this.tooltip);
+        list = null;
+        display.playSound(SoundEffect.PISTON_CONTRACT);
     }
 
     @Override

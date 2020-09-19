@@ -20,8 +20,9 @@ public abstract class MapWidgetIconToggleButton extends MapWidget {
 
     public abstract void onToggled();
 
-    public MapWidgetIconToggleButton setTooltip(String tooltipText) {
+    public MapWidgetIconToggleButton setTooltip(String tooltipText, boolean above) {
         this.tooltip.setText(tooltipText);
+        this.tooltip.setPreferAbove(above);
         return this;
     }
 

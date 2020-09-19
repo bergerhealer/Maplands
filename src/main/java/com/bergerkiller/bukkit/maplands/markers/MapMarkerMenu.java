@@ -45,7 +45,8 @@ public class MapMarkerMenu extends MapWidgetWindow {
                     markers.setMarkerTypeWhenHeld(getType());
                 }
             }).setType(markers.getMarkerTypeWhenHeld())
-              .setPosition(52, y);
+              .setTooltip("Marker type", true)
+              .setPosition(54, y);
 
             // Show coordinates on/off
             this.addWidget(new MapWidgetIconToggleButton() {
@@ -55,9 +56,9 @@ public class MapMarkerMenu extends MapWidgetWindow {
                 }
             }).setOnTexture("coords_enabled.png")
               .setOffTexture("coords_disabled.png")
-              .setTooltip("Show coordinates")
+              .setTooltip("Show coordinates", true)
               .setOn(markers.showCoordinatesWhenHeld())
-              .setPosition(65, y);
+              .setPosition(67, y);
         }
 
         // "Players"
@@ -77,7 +78,8 @@ public class MapMarkerMenu extends MapWidgetWindow {
                     markers.setMarkerTypeForPlayers(getType());
                 }
             }).setType(markers.getMarkerTypeForPlayers())
-              .setPosition(52, y);
+              .setTooltip("Marker type", false)
+              .setPosition(54, y);
 
             // Show coordinates on/off
             this.addWidget(new MapWidgetIconToggleButton() {
@@ -87,9 +89,9 @@ public class MapMarkerMenu extends MapWidgetWindow {
                 }
             }).setOnTexture("coords_enabled.png")
               .setOffTexture("coords_disabled.png")
-              .setTooltip("Show coordinates")
+              .setTooltip("Show coordinates", false)
               .setOn(markers.showCoordinatesForPlayers())
-              .setPosition(65, y);
+              .setPosition(67, y);
 
             // Show name on/off
             this.addWidget(new MapWidgetIconToggleButton() {
@@ -99,9 +101,9 @@ public class MapMarkerMenu extends MapWidgetWindow {
                 }
             }).setOnTexture("names_enabled.png")
               .setOffTexture("names_disabled.png")
-              .setTooltip("Show names")
+              .setTooltip("Show names", false)
               .setOn(markers.showNameForPlayers())
-              .setPosition(78, y);
+              .setPosition(80, y);
         }
 
         // Static markers
@@ -114,13 +116,18 @@ public class MapMarkerMenu extends MapWidgetWindow {
 
             // List of markers with options + text
             // When activated, opens up a menu to modify/delete it
-            
+            this.addWidget(new MapStaticMarkerListWidget(this.markers) {
+                @Override
+                public void onItemActivated() {
+                    showStaticMarkerMenu(getSelectedItem());
+                    display.playSound(SoundEffect.PISTON_CONTRACT);
+                }
+            }).setPosition(11, 44);
 
             // Button to add new static markers
             this.addWidget(new MapWidgetButton() {
                 @Override
                 public void onActivate() {
-                    /*
                     for (Player owner : display.getOwners()) {
                         if (display.isControlling(owner)) {
                             Vector position = owner.getLocation().toVector();
@@ -130,10 +137,9 @@ public class MapMarkerMenu extends MapWidgetWindow {
                         }
                     }
                     display.playSound(SoundEffect.EXTINGUISH);
-                    */
                 }
             }).setText("Add static marker")
-              .setBounds(11,  80, 50, 11);
+              .setBounds(11, 95, 91, 11);
         }
     }
 
@@ -159,12 +165,12 @@ public class MapMarkerMenu extends MapWidgetWindow {
 
     private void setMarkersHidden(boolean hidden) {
         for (MapWidget widget : this.getWidgets()) {
-            if (widget instanceof MapMarkerTypeSelector) {
-                ((MapMarkerTypeSelector) widget).setMarkersHidden(hidden);
+            if (widget instanceof MapWidgetWithMarkers) {
+                ((MapWidgetWithMarkers) widget).setMarkersHidden(hidden);
             }
         }
     }
-    
+
     /**
      * Closes this menu, removing this window
      */

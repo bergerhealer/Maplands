@@ -11,6 +11,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 
 import com.bergerkiller.bukkit.common.map.MapMarker;
+import com.bergerkiller.bukkit.common.nbt.CommonTagCompound;
+import com.bergerkiller.bukkit.common.nbt.CommonTagList;
+import com.bergerkiller.bukkit.common.utils.CommonUtil;
 import com.bergerkiller.bukkit.common.utils.MathUtil;
 import com.bergerkiller.bukkit.maplands.MaplandsDisplay;
 
@@ -29,6 +32,7 @@ public class MapMarkers {
     private MapMarker.Type markerTypeForPlayers;
     private boolean playersShowCoords = false;
     private boolean playersShowName = false;
+    private boolean wereMarkersHiddenFirstTile = false;
 
     public MapMarkers(MaplandsDisplay display) {
         this.display = display;
@@ -147,6 +151,17 @@ public class MapMarkers {
         heldShowCoords = display.getProperties().get("showCoordsWhenHeld", false);
         playersShowCoords = display.getProperties().get("playersShowCoords", false);
         playersShowName = display.getProperties().get("playersShowName", false);
+
+        staticMarkers.clear();
+        CommonTagList nbtStaticMarkers = display.getProperties().get("staticMarkers", CommonTagList.class);
+        if (nbtStaticMarkers != null) {
+            for (int i = 0; i < nbtStaticMarkers.size(); i++) {
+                CommonTagCompound nbtStaticMarker = CommonUtil.tryCast(nbtStaticMarkers.get(i), CommonTagCompound.class);
+                if (nbtStaticMarker != null) {
+                    staticMarkers.add(MapStaticMarker.load(this, nbtStaticMarker));
+                }
+            }
+        }
     }
 
     public void save() {
@@ -155,11 +170,40 @@ public class MapMarkers {
         display.getProperties().set("showCoordsWhenHeld", heldShowCoords);
         display.getProperties().set("playersShowCoords", playersShowCoords);
         display.getProperties().set("playersShowName", playersShowName);
+
+        if (staticMarkers.isEmpty()) {
+            display.getProperties().set("staticMarkers", null);
+        } else {
+            CommonTagList nbtStaticMarkers = new CommonTagList();
+            for (MapStaticMarker marker : staticMarkers) {
+                nbtStaticMarkers.add(marker.save());
+            }
+            display.getProperties().set("staticMarkers", nbtStaticMarkers);
+        }
+    }
+
+    /**
+     * Gets whether markers in the first 128x128 tile area of the map are hidden.
+     * This is true when a menu is shown there.
+     * 
+     * @return True if markers in first tile are hidden
+     */
+    public boolean isHiddenInFirstTile() {
+        return display.getRootWidget().getWidgetCount() > 0;
     }
 
     public void update() {
+        // Forced update needed of static markers when menu is closed
+        if (wereMarkersHiddenFirstTile && !isHiddenInFirstTile()) {
+            this.viewChanged();
+        }
+
         Set<MapMarker> updatedMarkers = new HashSet<MapMarker>();
-        if (markerTypeWhenHeld != null) {
+        if (isHiddenInFirstTile()) {
+            // Dont show any of these
+            heldMarkers.forEach(MapMarker::remove);
+            heldMarkers.clear();
+        } else if (markerTypeWhenHeld != null) {
             updatedMarkers.clear();
             for (Player viewer : display.getViewers()) {
                 if (!display.isHolding(viewer)) {
@@ -227,7 +271,12 @@ public class MapMarkers {
                 {
                     continue;
                 }
-                
+
+                // If markers are hidden in the first tile (because menu is open), ignore those positions
+                if (isHiddenInFirstTile() && positionOnMap.getX() < 128.0 && positionOnMap.getY() < 128.0) {
+                    continue;
+                }
+
                 // Create a marker
                 String id = "player_" + player.getName();
                 MapMarker marker = display.getMarker(id);
@@ -275,6 +324,7 @@ public class MapMarkers {
      * Called by the display when the view translation/rotation/zoom changes
      */
     public void viewChanged() {
+        wereMarkersHiddenFirstTile = this.isHiddenInFirstTile();
         for (MapStaticMarker marker : this.staticMarkers) {
             marker.update();
         }
@@ -282,5 +332,6 @@ public class MapMarkers {
 
     public void showMenu() {
         display.addWidget(new MapMarkerMenu(this));
+        viewChanged();
     }
 }

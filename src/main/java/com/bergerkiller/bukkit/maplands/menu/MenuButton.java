@@ -59,6 +59,13 @@ public class MenuButton {
         }
     }
 
+    public void setBlinkOn() {
+        if (this.blinkCtr >= 5) {
+            this.blinkCtr = 0;
+            display.getLayer(2).draw(texture_on, x, y);
+        }
+    }
+
     public void onPressed() {
     }
 
