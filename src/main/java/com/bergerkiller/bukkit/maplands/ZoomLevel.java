@@ -24,7 +24,7 @@ public enum ZoomLevel {
     public static final ZoomLevel DEFAULT = ZOOM32;
 
     private final int width, height;
-    private final int step_x, step_y, step_y_div;
+    private final int step_x, step_y;
     private final int screen_y_base;
     private final int draw_dx, draw_dy;
     private final float dy, sy;
@@ -36,21 +36,19 @@ public enum ZoomLevel {
             // It's just too small to auto-compute it :(
             this.step_x = 1;
             this.step_y = 1;
-            this.step_y_div = 3;
             this.width = 2;
-            this.height = 1;
+            this.height = 2;
             this.draw_dx = -1;
-            this.draw_dy = 0;
-            this.screen_y_base = -2;
+            this.draw_dy = -1;
+            this.screen_y_base = -3;
             this.dy = dy;
             this.sy = sy;
             this.pitch = pitch;
-            this.mask = MapTexture.createEmpty(2, 1);
+            this.mask = MapTexture.createEmpty(2, 2);
             this.mask.fill(MapColorPalette.COLOR_WHITE);
         } else {
             this.step_x = (width >> 1);
             this.step_y = MathUtil.floor((double) width / 3.0);
-            this.step_y_div = 1;
             this.width = this.step_x * 2;
             this.height = this.step_y * 4;
             this.draw_dx = -(this.width >> 1);
@@ -76,18 +74,8 @@ public enum ZoomLevel {
     }
 
     public final int getNumberOfRows(int height) {
-        return 3 + MathUtil.ceil((double) height / (double) this.step_y * (double) this.step_y_div / 2.0);
+        return 3 + MathUtil.ceil((double) height / (double) this.step_y / 2.0);
     }
-
-    /*
-    public final int getColumns() {
-        return this.cols;
-    }
-
-    public final int getRows() {
-        return this.rows;
-    }
-    */
 
     /**
      * Gets the delta change in screen x-coordinates with every tile step
@@ -104,7 +92,7 @@ public enum ZoomLevel {
      * @return tile y step
      */
     public final double getTileStepY() {
-        return (double) this.step_y / (double) this.step_y_div;
+        return (double) this.step_y;
     }
 
     /**
@@ -124,7 +112,7 @@ public enum ZoomLevel {
      * @return y screen position of the tile (middle)
      */
     public final int getScreenY(int ty) {
-        return ty * this.step_y / this.step_y_div + this.screen_y_base;
+        return ty * this.step_y + this.screen_y_base;
     }
 
     /**
