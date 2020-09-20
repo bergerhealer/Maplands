@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 
 import org.bukkit.Bukkit;
 import org.bukkit.World;
@@ -24,6 +25,7 @@ import com.bergerkiller.bukkit.common.map.MapDisplayProperties;
 import com.bergerkiller.bukkit.common.map.MapSessionMode;
 import com.bergerkiller.bukkit.common.map.MapTexture;
 import com.bergerkiller.bukkit.common.math.Vector2;
+import com.bergerkiller.bukkit.common.resources.SoundEffect;
 import com.bergerkiller.bukkit.common.map.MapPlayerInput.Key;
 import com.bergerkiller.bukkit.common.utils.FaceUtil;
 import com.bergerkiller.bukkit.common.utils.MathUtil;
@@ -37,6 +39,7 @@ import com.bergerkiller.bukkit.maplands.menu.MenuButton;
  */
 public class MaplandsDisplay extends MapDisplay {
     private final MapMarkers mapMarkers = new MapMarkers(this);
+    private final MaplandsDisplayChunks chunks = new MaplandsDisplayChunks();
     private IsometricBlockSprites sprites;
     private MapTexture testSprite;
     private ZoomLevel zoom;
@@ -116,6 +119,9 @@ public class MaplandsDisplay extends MapDisplay {
 
         // Save our current state to disk
         Maplands.plugin.getCache().save(this.getMapInfo().uuid, this.getLayer());
+
+        // Release chunks we keep loaded
+        chunks.clear();
     }
 
     public MapDisplayProperties getProperties() {
@@ -269,6 +275,7 @@ public class MaplandsDisplay extends MapDisplay {
                 this.setMenuIndex(this.menuSelectIndex + 1);
             } else if (event.getKey() == Key.ENTER) {
                 // Activate menu button
+                this.playSound(SoundEffect.CLICK);
                 this.menuButtons[this.menuSelectIndex].onPressed();
             } else if (event.getKey() == Key.BACK) {
                 // Hide menu again
@@ -292,6 +299,7 @@ public class MaplandsDisplay extends MapDisplay {
 
             if (event.getKey() == Key.ENTER) {
                 //rotate(1);
+                this.playSound(SoundEffect.EXTINGUISH);
                 this.render(RenderMode.INITIALIZE);
             }
         }
@@ -309,14 +317,14 @@ public class MaplandsDisplay extends MapDisplay {
      * @param ty Tile y-coordinate (vertical)
      * @param tz Tile depth
      * @param isRedraw Whether to redraw the block entirely, instead of on top the current contents
-     * @return True if void area remains behind the block drawn, False if no more drawing is required
+     * @return result of the drawing operation
      */
-    public boolean drawBlockTile(int tx, int ty, int tz, boolean isRedraw) {
+    public DrawResult drawBlockTile(int tx, int ty, int tz, boolean isRedraw) {
         IntVector3 b = MapUtil.screenTileToBlock(this.facing, tx, ty, tz);
         if (b != null) {
             return drawBlockAtTile(b, tx, ty, isRedraw);
         } else {
-            return true;
+            return DrawResult.PARTIALLY_DRAWN;
         }
     }
 
@@ -328,13 +336,17 @@ public class MaplandsDisplay extends MapDisplay {
      * @param tx Tile x-coordinate (horizontal)
      * @param ty Tile y-coordinate (vertical)
      * @param isRedraw Whether to redraw the block entirely, instead of on top the current contents
-     * @return True if void area remains behind the block drawn, False if no more drawing is required
+     * @return result of the drawing operation
      */
-    public boolean drawBlockAtTile(IntVector3 relativeBlockCoords, int tx, int ty, boolean isRedraw) {
+    public DrawResult drawBlockAtTile(IntVector3 relativeBlockCoords, int tx, int ty, boolean isRedraw) {
         int x = this.startBlock.getX() + relativeBlockCoords.x;
         int y = this.startBlock.getY() + relativeBlockCoords.y;
         int z = this.startBlock.getZ() + relativeBlockCoords.z;
         if (y >= 0 && y < 256) {
+            if (!this.chunks.cacheBlock(this.startBlock.getWorld(), x, z)) {
+                return DrawResult.NOT_DRAWN;
+            }
+
             MapTexture sprite = this.sprites.getSprite(this.startBlock.getWorld(), x, y, z);
             if (sprite != this.sprites.AIR || !isRedraw) {
                 int draw_x = sprites.getZoom().getDrawX(tx) + (this.getWidth() >> 1);
@@ -363,16 +375,18 @@ public class MaplandsDisplay extends MapDisplay {
                     getLayer().draw(sprite, draw_x, draw_y);
                 }
 
-                return getLayer().hasMoreDepth(draw_x, draw_y, sprite.getWidth(), sprite.getHeight());
+                return getLayer().hasMoreDepth(draw_x, draw_y, sprite.getWidth(), sprite.getHeight()) ?
+                        DrawResult.PARTIALLY_DRAWN : DrawResult.FULLY_DRAWN;
             } else {
-                return true;
+                return DrawResult.PARTIALLY_DRAWN;
             }
         } else {
-            return true;
+            return DrawResult.PARTIALLY_DRAWN;
         }
     }
 
     public void hideMenu() {
+        this.playSound(SoundEffect.PISTON_CONTRACT);
         menuShowTicks = 0;
         for (MenuButton button : this.menuButtons) {
             button.setVisible(false);
@@ -381,6 +395,7 @@ public class MaplandsDisplay extends MapDisplay {
     }
 
     public void showMenu() {
+        this.playSound(SoundEffect.PISTON_EXTEND);
         menuShowTicks = MENU_DURATION;
         for (int i = 0; i < this.menuButtons.length; i++) {
             this.menuButtons[i].setVisible(true);
@@ -637,9 +652,12 @@ public class MaplandsDisplay extends MapDisplay {
      * Renders a single depth level onto the canvas
      * 
      * @param depth The depth to render (same as z-coordinate of the tile)
+     * @return result of drawing the slice
      */
-    private void renderSlice(int depth) {
+    private DrawResult renderSlice(int depth) {
         getLayer().setDrawDepth(depth);
+        boolean mapIsFullyDrawn = true;
+        boolean sliceHasNotDrawnTiles = false;
         int tileIdx = -1;
         for (int ty = minRows; ty <= maxRows; ty++) {
             int ymin = ty - (this.startBlock.getY());
@@ -650,12 +668,30 @@ public class MaplandsDisplay extends MapDisplay {
 
             for (int tx = minCols; tx <= maxCols; tx++) {
                 tileIdx++;
-                if (!this.drawnTiles[tileIdx] && !drawBlockTile(tx, ty, depth, true)) {
+                if (this.drawnTiles[tileIdx]) {
+                    continue;
+                }
 
+                DrawResult tileResult = drawBlockTile(tx, ty, depth, true);
+                if (tileResult == DrawResult.NOT_DRAWN) {
+                    sliceHasNotDrawnTiles = true;
+                    continue;
+                }
+
+                if (tileResult == DrawResult.PARTIALLY_DRAWN) {
+                    mapIsFullyDrawn = false;
+                } else {
                     // Fully covered. No longer render this tile!
                     this.drawnTiles[tileIdx] = true;
                 }
             }
+        }
+        if (sliceHasNotDrawnTiles) {
+            return DrawResult.NOT_DRAWN;
+        } else if (mapIsFullyDrawn) {
+            return DrawResult.FULLY_DRAWN;
+        } else {
+            return DrawResult.PARTIALLY_DRAWN;
         }
     }
 
@@ -687,12 +723,26 @@ public class MaplandsDisplay extends MapDisplay {
         // Refresh displayed markers
         this.mapMarkers.update();
 
+        // Unload chunks we haven't used in a while
+        this.chunks.update();
+
         // Re-render all dirty tiles
         // If they result in holes, schedule the area behind for re-rendering
         if (!dirtyTiles.isEmpty()) {
-            for (IntVector3 tile : this.dirtyTiles) {
+            Iterator<IntVector3> iter = this.dirtyTiles.iterator();
+            while (iter.hasNext()) {
+                IntVector3 tile = (IntVector3) iter.next();
                 getLayer().setDrawDepth(tile.z);
-                if (drawBlockTile(tile.x, tile.y, tile.z, false)) {
+                DrawResult tileResult = drawBlockTile(tile.x, tile.y, tile.z, false);
+                if (tileResult == DrawResult.NOT_DRAWN) {
+                    continue; // Try again next tick
+                }
+
+                // Processed, remove the coordinate
+                iter.remove();
+
+                // Redraw neighbours too
+                if (tileResult == DrawResult.PARTIALLY_DRAWN) {
                     for (int dtx = -1; dtx <= 1; dtx++) {
                         for (int dty = -2; dty <= 2; dty++) {
                             invalidateTile(tile.x + dtx, tile.y + dty, tile.z);
@@ -700,7 +750,6 @@ public class MaplandsDisplay extends MapDisplay {
                     }
                 }
             }
-            this.dirtyTiles.clear();
         }
 
         // Render at most 50 ms / map / tick
@@ -709,10 +758,17 @@ public class MaplandsDisplay extends MapDisplay {
             rendertime++;
             do {
                 if (forwardRenderNeeded) {
-                    renderSlice(currentRenderZ);
-                    forwardRenderNeeded = this.getLayer().hasMoreDepth();
+                    DrawResult sliceResult = renderSlice(currentRenderZ);
+                    if (sliceResult == DrawResult.FULLY_DRAWN) {
+                        forwardRenderNeeded = false;
+                    } else if (sliceResult == DrawResult.NOT_DRAWN) {
+                        break; // Try same slice again next tick
+                    }
+
+                    // Next z-depth
+                    this.currentRenderZ++;
                 }
-            } while (++this.currentRenderZ <= this.maximumRenderZ && (System.currentTimeMillis() - startTime) < Maplands.getMaxRenderTime());
+            } while (this.currentRenderZ <= this.maximumRenderZ && (System.currentTimeMillis() - startTime) < Maplands.getMaxRenderTime());
 
             if (this.currentRenderZ > this.maximumRenderZ) {
                 // Fill all remaining holes with the desired background color
@@ -755,5 +811,17 @@ public class MaplandsDisplay extends MapDisplay {
 
     public static Collection<MaplandsDisplay> getAllDisplays() {
         return all_maplands_displays;
+    }
+
+    /**
+     * Result of drawing a single block tile
+     */
+    public static enum DrawResult {
+        /** Tile is fully drawn, and no further blocks behind this tile need drawing */
+        FULLY_DRAWN,
+        /** Tile is partially drawn, blocks behind the current block need drawing */
+        PARTIALLY_DRAWN,
+        /** Tile wasn't drawn because the chunk isn't loaded yet, and needs drawn again */
+        NOT_DRAWN
     }
 }
