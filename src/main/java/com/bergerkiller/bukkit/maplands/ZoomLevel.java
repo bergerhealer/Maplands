@@ -14,7 +14,7 @@ import com.bergerkiller.bukkit.common.utils.MathUtil;
  * A map zoom level that can be used
  */
 public enum ZoomLevel {
-    ZOOM2( 2,  -0.50f,  19.8758f,  -70f),
+    ZOOM2( 2,  0.00f,  19.8758f,  -70f),
     ZOOM4( 4,  0.00f,  19.8758f,  -70f),
     ZOOM8( 8,  0.5f,   19.8758f,  -55f),
     ZOOM16(16, 2.5f,   19.8758f,  -51.2f),

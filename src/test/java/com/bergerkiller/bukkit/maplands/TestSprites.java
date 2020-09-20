@@ -39,7 +39,7 @@ public class TestSprites {
     @Test
     public void testSprites() {
         ZoomLevel zoom = ZoomLevel.ZOOM2;
-        Material mat1 = Material.CHEST;
+        Material mat1 = Material.GRASS_BLOCK;
         Material mat2 = Material.BIRCH_LOG;
         MapTexture map = MapTexture.createEmpty(6 * zoom.getWidth(), 4 * zoom.getHeight());
         sprites = new IsometricBlockSprites[] {
