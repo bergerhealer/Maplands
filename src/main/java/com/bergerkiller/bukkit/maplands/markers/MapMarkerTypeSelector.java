@@ -89,7 +89,7 @@ public abstract class MapMarkerTypeSelector extends MapWidget implements MapWidg
         } else {
             previewMarker.setVisible(false);
         }
-        previewMarker.setPosition((double) this.getAbsoluteX() + 0.5 * this.getWidth() + 0.5, getMarkerBaseY());
+        previewMarker.setPosition(getMarkerBaseX(), getMarkerBaseY());
     }
 
     @Override
@@ -113,8 +113,12 @@ public abstract class MapMarkerTypeSelector extends MapWidget implements MapWidg
         }
     }
 
+    private double getMarkerBaseX() {
+        return (double) this.getAbsoluteX() + 0.5 * this.getWidth() - 0.5;
+    }
+
     private double getMarkerBaseY() {
-        return (double) this.getAbsoluteY() + 0.5 * this.getHeight() - 0.5;
+        return (double) this.getAbsoluteY() + 0.5 * this.getHeight() + 0.5;
     }
 
     @Override
@@ -191,7 +195,7 @@ public abstract class MapMarkerTypeSelector extends MapWidget implements MapWidg
 
         @Override
         public void onAttached() {
-            double mx = MapMarkerTypeSelector.this.getAbsoluteX() + (this.getWidth() / 2) + 0.5;
+            double mx = MapMarkerTypeSelector.this.getMarkerBaseX();
             double my = MapMarkerTypeSelector.this.getMarkerBaseY();
             double dy = 9.0;
             display.createMarker("typeselector_-2").setPosition(mx, my - 2.0 * dy);
