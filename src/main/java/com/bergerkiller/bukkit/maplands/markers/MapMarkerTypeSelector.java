@@ -165,7 +165,9 @@ public abstract class MapMarkerTypeSelector extends MapWidget implements MapWidg
     private void closeList() {
         this.deactivate();
         this.removeWidget(list);
-        this.addWidget(this.tooltip);
+        if (!this.getWidgets().contains(this.tooltip)) {
+            this.addWidget(this.tooltip);
+        }
         list = null;
         display.playSound(SoundEffect.PISTON_CONTRACT);
     }
@@ -174,7 +176,9 @@ public abstract class MapMarkerTypeSelector extends MapWidget implements MapWidg
     public void onFocus() {
         super.onFocus();
 
-        this.addWidget(this.tooltip);
+        if (!this.getWidgets().contains(this.tooltip)) {
+            this.addWidget(this.tooltip);
+        }
 
         // Click navigation sounds
         display.playSound(SoundEffect.CLICK_WOOD);
