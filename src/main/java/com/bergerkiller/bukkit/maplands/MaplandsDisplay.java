@@ -783,7 +783,7 @@ public class MaplandsDisplay extends MapDisplay {
                 // Store in attributes that it has finished rendering
                 if (!properties.get("finishedRendering", false)) {
                     properties.set("finishedRendering", true);
-                    Maplands.plugin.getCache().save(this.getMapInfo().uuid, this.getLayer());
+                    Maplands.plugin.getCache().save(this.properties.getUniqueId(), this.getLayer());
                 }
 
                 //System.out.println("RENDER TIME: " + rendertime);
