@@ -104,7 +104,7 @@ public class MaplandsDisplay extends MapDisplay {
         this.setSessionMode(MapSessionMode.FOREVER); // VIEWING for debug, FOREVER for release
 
         // Load from cache if possible
-        if (Maplands.plugin.getCache().load(this.getMapInfo().uuid, this.getLayer())) {
+        if (Maplands.plugin.getCache().load(this.properties.getUniqueId(), this.getLayer())) {
             this.render(RenderMode.FROM_CACHE);
         } else {
             this.render(RenderMode.INITIALIZE);
@@ -118,7 +118,7 @@ public class MaplandsDisplay extends MapDisplay {
         refreshMapDisplayLookup();
 
         // Save our current state to disk
-        Maplands.plugin.getCache().save(this.getMapInfo().uuid, this.getLayer());
+        Maplands.plugin.getCache().save(this.properties.getUniqueId(), this.getLayer());
 
         // Release chunks we keep loaded
         chunks.clear();
