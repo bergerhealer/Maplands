@@ -22,8 +22,10 @@ import com.bergerkiller.bukkit.common.map.MapCanvas;
 import com.bergerkiller.bukkit.common.map.MapColorPalette;
 import com.bergerkiller.bukkit.common.map.MapDisplay;
 import com.bergerkiller.bukkit.common.map.MapDisplayProperties;
+import com.bergerkiller.bukkit.common.map.MapFont;
 import com.bergerkiller.bukkit.common.map.MapSessionMode;
 import com.bergerkiller.bukkit.common.map.MapTexture;
+import com.bergerkiller.bukkit.common.map.MapFont.Alignment;
 import com.bergerkiller.bukkit.common.math.Vector2;
 import com.bergerkiller.bukkit.common.resources.SoundEffect;
 import com.bergerkiller.bukkit.common.map.MapPlayerInput.Key;
@@ -138,6 +140,13 @@ public class MaplandsDisplay extends MapDisplay {
     }
 
     private void render(RenderMode renderMode) {
+        // If no start block is initialized yet, always switch to mode INITIALIZE
+        // This is used if a world is unloaded, but is then loaded again
+        if (startBlock == null) {
+            renderMode = RenderMode.INITIALIZE;
+        }
+
+        // Read properties of the map
         int px = properties.get("px", 0);
         int py = properties.get("py", 0);
         int pz = properties.get("pz", 0);
@@ -157,6 +166,12 @@ public class MaplandsDisplay extends MapDisplay {
             this.setMapItem(this.getMapItem());
         }
         World world = Bukkit.getWorld(worldName);
+
+        // If not loaded, display a 'not loaded' message
+        if (world == null) {
+            this.renderWorldUnloaded(worldName);
+            return;
+        }
 
         // Get the correct sprites
         this.sprites = IsometricBlockSprites.getSprites(facing, this.zoom);
@@ -214,8 +229,18 @@ public class MaplandsDisplay extends MapDisplay {
         rendertime = 0;
     }
 
+    /**
+     * Gets whether the world is loaded, and this map is
+     * able to display it
+     *
+     * @return True if the world is loaded, and this display is initialized
+     */
+    public boolean isLoaded() {
+        return this.startBlock != null;
+    }
+
     public boolean isRenderingWorld(World world) {
-        return this.startBlock.getWorld() == world;
+        return this.startBlock != null && this.startBlock.getWorld() == world;
     }
 
     public boolean isBlockWithinBounds(int bx, int by, int bz) {
@@ -285,7 +310,11 @@ public class MaplandsDisplay extends MapDisplay {
         } else if (event.getKey() == Key.BACK) {
             // Show menu
             this.showMenu();
-        } else {
+        } else if (event.getKey() == Key.ENTER) {
+            // Re-render display. Also re-renders it if the world wasn't loaded, but is now.
+            this.playSound(SoundEffect.EXTINGUISH);
+            this.render(RenderMode.INITIALIZE);
+        } else if (this.isLoaded()) {
             // No menu is shown. Simple navigation.
             if (event.getKey() == Key.UP) {
                 moveStartBlock(facing, 1);
@@ -295,12 +324,6 @@ public class MaplandsDisplay extends MapDisplay {
                 moveStartBlock(FaceUtil.rotate(facing, 4), 1);
             } else if (event.getKey() == Key.LEFT) {
                 moveStartBlock(FaceUtil.rotate(facing, 6), 1);
-            }
-
-            if (event.getKey() == Key.ENTER) {
-                //rotate(1);
-                this.playSound(SoundEffect.EXTINGUISH);
-                this.render(RenderMode.INITIALIZE);
             }
         }
     }
@@ -649,6 +672,49 @@ public class MaplandsDisplay extends MapDisplay {
     }
 
     /**
+     * Renders a 'world not loaded' screen
+     *
+     * @param worldName
+     */
+    private void renderWorldUnloaded(String worldName) {
+        this.startBlock = null;
+        this.chunks.clear();
+        this.hideMenu();
+        this.clearMarkers();
+        this.clearWidgets();
+        this.getLayer().clearDepthBuffer();
+        this.getLayer(1).clear();
+
+        this.getLayer().setBlendMode(MapBlendMode.NONE);
+        this.getLayer().fill(MapColorPalette.getColor(64, 64, 64));
+
+        MapTexture text = MapTexture.createEmpty(128, 32);
+        text.setAlignment(Alignment.MIDDLE);
+        text.draw(MapFont.MINECRAFT, text.getWidth()/2, text.getHeight()/2 - 10,
+                MapColorPalette.COLOR_RED, "World is not loaded");
+        text.draw(MapFont.MINECRAFT, text.getWidth()/2, text.getHeight()/2 + 9,
+                MapColorPalette.COLOR_ORANGE, worldName);
+
+        // Scale it up to fit
+        // TODO: More efficient, or something in BKCommonLib?
+        int scale = Math.min(this.getWidth()/text.getWidth(), this.getHeight()/text.getHeight());
+        if (scale > 1) {
+            MapTexture scaled = MapTexture.createEmpty(text.getWidth()*scale, text.getHeight()*scale);
+            for (int y = 0; y < text.getHeight(); y++) {
+                for (int x = 0; x < text.getWidth(); x++) {
+                    scaled.fillRectangle(x*scale, y*scale, scale, scale, text.readPixel(x, y));
+                }
+            }
+            text = scaled;
+        }
+
+        int x = (this.getWidth() - text.getWidth()) / 2;
+        int y = (this.getHeight() - text.getHeight()) / 2;
+        this.getLayer(1).setBlendMode(MapBlendMode.NONE);
+        this.getLayer(1).draw(text, x, y);
+    }
+
+    /**
      * Renders a single depth level onto the canvas
      * 
      * @param depth The depth to render (same as z-coordinate of the tile)
@@ -702,6 +768,21 @@ public class MaplandsDisplay extends MapDisplay {
 
     @Override
     public void onTick() {
+        // Receive player input from players holding the map in the main hand,
+        // that are not sneaking and have permission to edit
+        updateCheckHolding();
+
+        // If not loaded, do nothing
+        if (this.startBlock == null) {
+            return;
+        }
+
+        // If startBlock refers to a now-unloaded world, unload the map
+        if (Bukkit.getWorld(this.startBlock.getWorld().getName()) == null) {
+            this.render(RenderMode.INITIALIZE);
+            return;
+        }
+
         if (this.getRootWidget().getWidgetCount() == 0) {
             if (menuShowTicks > 0 && --menuShowTicks == 0) {
                 this.hideMenu();
@@ -715,10 +796,6 @@ public class MaplandsDisplay extends MapDisplay {
                 button.setBlinkOn();
             }
         }
-
-        // Receive player input from players holding the map in the main hand,
-        // that are not sneaking and have permission to edit
-        updateCheckHolding();
 
         // Refresh displayed markers
         this.mapMarkers.update();
