@@ -253,7 +253,7 @@ public class MaplandsDisplay extends MapDisplay {
 
     public void onBlockChange(World world, int bx, int by, int bz) {
         // Check possibly in range before doing computationally expensive stuff
-        if (world == this.startBlock.getWorld() && this.blockBounds.contains(bx, by, bz)) {
+        if (this.startBlock != null && world == this.startBlock.getWorld() && this.blockBounds.contains(bx, by, bz)) {
             int dx = bx - this.startBlock.getX();
             int dy = by - this.startBlock.getY();
             int dz = bz - this.startBlock.getZ();
