@@ -1,6 +1,5 @@
 package com.bergerkiller.bukkit.maplands;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -31,9 +30,11 @@ import com.bergerkiller.bukkit.common.resources.SoundEffect;
 import com.bergerkiller.bukkit.common.map.MapPlayerInput.Key;
 import com.bergerkiller.bukkit.common.utils.FaceUtil;
 import com.bergerkiller.bukkit.common.utils.MathUtil;
-import com.bergerkiller.bukkit.common.utils.WorldUtil;
 import com.bergerkiller.bukkit.maplands.markers.MapMarkers;
 import com.bergerkiller.bukkit.maplands.menu.MenuButton;
+import com.bergerkiller.bukkit.maplands.util.Linked2DTile;
+import com.bergerkiller.bukkit.maplands.util.Linked2DTileList;
+import com.bergerkiller.bukkit.maplands.util.Linked2DTileSet;
 
 /**
  * Main display class of Maplands. Renders the world on the map and provides
@@ -43,7 +44,6 @@ public class MaplandsDisplay extends MapDisplay {
     private final MapMarkers mapMarkers = new MapMarkers(this);
     private final MaplandsDisplayChunks chunks = new MaplandsDisplayChunks();
     private IsometricBlockSprites sprites;
-    private MapTexture testSprite;
     private ZoomLevel zoom;
     private BlockFace facing;
     private Block startBlock;
@@ -53,10 +53,8 @@ public class MaplandsDisplay extends MapDisplay {
     private int currentRenderZ;
     private int minimumRenderZ;
     private int maximumRenderZ;
-    private boolean forwardRenderNeeded;
     private int minCols, maxCols, minRows, maxRows;
-    private boolean enableLight = false;
-    private boolean[] drawnTiles; //TODO: Bitset may be faster/more memory efficient?
+    private Linked2DTileSet tilesThatNeedDrawing = new Linked2DTileSet();
     private final HashSet<IntVector3> dirtyTiles = new HashSet<IntVector3>();
     private MenuButton[] menuButtons;
     private MapTexture menu_bg;
@@ -142,7 +140,7 @@ public class MaplandsDisplay extends MapDisplay {
     private void render(RenderMode renderMode) {
         // If no start block is initialized yet, always switch to mode INITIALIZE
         // This is used if a world is unloaded, but is then loaded again
-        if (startBlock == null) {
+        if (startBlock == null && renderMode != RenderMode.FROM_CACHE) {
             renderMode = RenderMode.INITIALIZE;
         }
 
@@ -175,7 +173,6 @@ public class MaplandsDisplay extends MapDisplay {
 
         // Get the correct sprites
         this.sprites = IsometricBlockSprites.getSprites(facing, this.zoom);
-        this.testSprite = MapTexture.createEmpty(zoom.getWidth(), zoom.getHeight());
 
         // Start coordinates for the view
         this.startBlock = world.getBlockAt(px, py, pz);
@@ -206,24 +203,26 @@ public class MaplandsDisplay extends MapDisplay {
         this.blockBounds.offset(this.startBlock);
 
         if (renderMode == RenderMode.FROM_CACHE && this.properties.get("finishedRendering", false)) {
-            this.currentRenderZ = this.maximumRenderZ;
+            this.currentRenderZ = this.maximumRenderZ + 1;
         } else {
             this.currentRenderZ = this.minimumRenderZ;
             this.properties.set("finishedRendering", false);
         }
 
-        this.forwardRenderNeeded = true;
         this.dirtyTiles.clear();
 
         // Reset drawn tiles state when initializing / from cache
         // This will cause everything to render again
         if (renderMode != RenderMode.TRANSLATION) {
-            int len = (this.maxRows - this.minRows + 1) * (this.maxCols - this.minCols + 1);
-            if (this.drawnTiles == null || len != this.drawnTiles.length) {
-                this.drawnTiles = new boolean[len];
-            } else {
-                Arrays.fill(this.drawnTiles, false);
+            if (this.minCols != this.tilesThatNeedDrawing.getMinX() ||
+                this.maxCols != this.tilesThatNeedDrawing.getMaxX() ||
+                this.minRows != this.tilesThatNeedDrawing.getMinY() ||
+                this.maxRows != this.tilesThatNeedDrawing.getMaxY())
+            {
+                this.tilesThatNeedDrawing = new Linked2DTileSet(this.minCols, this.maxCols,
+                                                                this.minRows, this.maxRows);
             }
+            this.tilesThatNeedDrawing.setAll();
         }
 
         rendertime = 0;
@@ -267,10 +266,7 @@ public class MaplandsDisplay extends MapDisplay {
 
     private void invalidateTile(int tx, int ty, int tz) {
         if (tx >= this.minCols && tx <= this.maxCols && ty >= this.minRows && ty <= this.maxRows) {
-            tx -= this.minCols;
-            ty -= this.minRows;
-            this.drawnTiles[ty * (this.maxCols - this.minCols + 1) + tx] = false;
-            this.forwardRenderNeeded = true;
+            this.tilesThatNeedDrawing.set(tx, ty);
             if (this.currentRenderZ > tz) {
                 this.currentRenderZ = tz;
             }
@@ -313,6 +309,7 @@ public class MaplandsDisplay extends MapDisplay {
         } else if (event.getKey() == Key.ENTER) {
             // Re-render display. Also re-renders it if the world wasn't loaded, but is now.
             this.playSound(SoundEffect.EXTINGUISH);
+            //this.getLayer().clear();
             this.render(RenderMode.INITIALIZE);
         } else if (this.isLoaded()) {
             // No menu is shown. Simple navigation.
@@ -326,10 +323,6 @@ public class MaplandsDisplay extends MapDisplay {
                 moveStartBlock(FaceUtil.rotate(facing, 6), 1);
             }
         }
-    }
-
-    private int getLight(int x, int y, int z) {
-        return WorldUtil.getSkyLight(this.startBlock.getWorld().getChunkAt(x >> 4, z >> 4), x, y, z);
     }
 
     /**
@@ -365,46 +358,33 @@ public class MaplandsDisplay extends MapDisplay {
         int x = this.startBlock.getX() + relativeBlockCoords.x;
         int y = this.startBlock.getY() + relativeBlockCoords.y;
         int z = this.startBlock.getZ() + relativeBlockCoords.z;
-        if (y >= 0 && y < 256) {
+        if (y < 0) {
+            return DrawResult.FULLY_DRAWN;
+        } else if (y >= 256) {
+            return DrawResult.PARTIALLY_DRAWN;
+        } else {
             if (!this.chunks.cacheBlock(this.startBlock.getWorld(), x, z)) {
                 return DrawResult.NOT_DRAWN;
             }
 
-            MapTexture sprite = this.sprites.getSprite(this.startBlock.getWorld(), x, y, z);
+            IsometricBlockSprites.Sprite sprite = this.sprites.getSprite(this.startBlock.getWorld(), x, y, z);
             if (sprite != this.sprites.AIR || !isRedraw) {
                 int draw_x = sprites.getZoom().getDrawX(tx) + (this.getWidth() >> 1);
                 int draw_y = sprites.getZoom().getDrawY(ty) + (this.getHeight() >> 1);
 
-                if (enableLight) {
-                    int light = getLight(x, y + 1, z);
-                    if (light < 15) {
-                        light = Math.max(light, getLight(x - 1, y, z));
-                        light = Math.max(light, getLight(x + 1, y, z));
-                        light = Math.max(light, getLight(x, y, z - 1));
-                        light = Math.max(light, getLight(x, y, z + 1));
-                    }
-
-                    float lightf = (float) light / 15.0f;
-                    lightf *= lightf;
-
-                    byte[] in = sprite.getBuffer();
-                    byte[] buff = testSprite.getBuffer();
-                    for (int i = 0; i < buff.length; i++) {
-                        buff[i] = MapColorPalette.getSpecular(in[i], lightf);
-                    }
-
-                    getLayer().draw(testSprite, draw_x, draw_y);
+                MapTexture texture = sprite.texture;
+                getLayer().draw(texture, draw_x, draw_y);
+                if (sprite.isFullyOpaque) {
+                    // Fully opaque sprite, no need to check
+                    return DrawResult.FULLY_DRAWN;
                 } else {
-                    getLayer().draw(sprite, draw_x, draw_y);
+                    // Ask canvas whether any more pixels remain to be drawn
+                    return getLayer().hasMoreDepth(draw_x, draw_y, texture.getWidth(), texture.getHeight()) ?
+                            DrawResult.PARTIALLY_DRAWN : DrawResult.FULLY_DRAWN;
                 }
-
-                return getLayer().hasMoreDepth(draw_x, draw_y, sprite.getWidth(), sprite.getHeight()) ?
-                        DrawResult.PARTIALLY_DRAWN : DrawResult.FULLY_DRAWN;
             } else {
                 return DrawResult.PARTIALLY_DRAWN;
             }
-        } else {
-            return DrawResult.PARTIALLY_DRAWN;
         }
     }
 
@@ -569,22 +549,20 @@ public class MaplandsDisplay extends MapDisplay {
                 fMaxRows += dty - 5;
             }
 
-            boolean[] newDrawnTiles = new boolean[this.drawnTiles.length];
-            int tileIdx = -1;
-            for (int y = this.minRows; y <= this.maxRows; y++) {
-                for (int x = this.minCols; x <= this.maxCols; x++) {
-                    tileIdx++;
-                    boolean value = this.drawnTiles[tileIdx];
-                    int mx = x + dtx;
-                    int my = y + dty;
+            // Move the drawn tile state buffer
+            {
+                Linked2DTileSet newTilesThatNeedDrawing = new Linked2DTileSet(this.minCols, this.maxCols,
+                                                                              this.minRows, this.maxRows);
+                newTilesThatNeedDrawing.setAll();
+                for (Linked2DTile tile : this.tilesThatNeedDrawing.iterateInverse()) {
+                    int mx = tile.x + dtx;
+                    int my = tile.y + dty;
                     if (mx >= fMinCols && mx <= fMaxCols && my >= fMinRows && my <= fMaxRows) {
-                        int index = tileIdx;
-                        index += dty * (this.maxCols - this.minCols + 1) + dtx;
-                        newDrawnTiles[index] = value;
+                        newTilesThatNeedDrawing.clear(mx, my);
                     }
-                }
+                 }
+                 this.tilesThatNeedDrawing = newTilesThatNeedDrawing;
             }
-            this.drawnTiles = newDrawnTiles;
 
             // When moving up or down, the depth buffer values are incremented/decremented
             if (dty != 0) {
@@ -724,34 +702,26 @@ public class MaplandsDisplay extends MapDisplay {
         getLayer().setDrawDepth(depth);
         boolean mapIsFullyDrawn = true;
         boolean sliceHasNotDrawnTiles = false;
-        int tileIdx = -1;
-        for (int ty = minRows; ty <= maxRows; ty++) {
-            int ymin = ty - (this.startBlock.getY());
-            int ymax = ty + (256 - this.startBlock.getY());
-            if (ty < ymin || ty > ymax) {
-                continue;
-            }
 
-            for (int tx = minCols; tx <= maxCols; tx++) {
-                tileIdx++;
-                if (this.drawnTiles[tileIdx]) {
-                    continue;
-                }
-
-                DrawResult tileResult = drawBlockTile(tx, ty, depth, true);
-                if (tileResult == DrawResult.NOT_DRAWN) {
+        {
+            Linked2DTileList list = this.tilesThatNeedDrawing.getValidTiles(depth);
+            Linked2DTile current = list.head;
+            while ((current = current.next) != list.tail) {
+                switch (drawBlockAtTile(current.toBlock(this.facing, depth), current.x, current.y, true)) {
+                case NOT_DRAWN:
                     sliceHasNotDrawnTiles = true;
-                    continue;
-                }
-
-                if (tileResult == DrawResult.PARTIALLY_DRAWN) {
+                    break;
+                case PARTIALLY_DRAWN:
                     mapIsFullyDrawn = false;
-                } else {
+                    break;
+                case FULLY_DRAWN:
                     // Fully covered. No longer render this tile!
-                    this.drawnTiles[tileIdx] = true;
+                    current = current.remove();
+                    break;
                 }
             }
         }
+
         if (sliceHasNotDrawnTiles) {
             return DrawResult.NOT_DRAWN;
         } else if (mapIsFullyDrawn) {
@@ -834,18 +804,14 @@ public class MaplandsDisplay extends MapDisplay {
         if (this.currentRenderZ <= this.maximumRenderZ) {
             rendertime++;
             do {
-                if (forwardRenderNeeded) {
-                    DrawResult sliceResult = renderSlice(currentRenderZ);
-                    if (sliceResult == DrawResult.FULLY_DRAWN) {
-                        forwardRenderNeeded = false;
-                    } else if (sliceResult == DrawResult.NOT_DRAWN) {
-                        break; // Try same slice again next tick
-                    }
-
-                    // Next z-depth
-                    this.currentRenderZ++;
+                DrawResult sliceResult = renderSlice(currentRenderZ);
+                if (sliceResult == DrawResult.FULLY_DRAWN) {
+                    this.currentRenderZ = this.maximumRenderZ + 1;
+                    break;
+                } else if (sliceResult == DrawResult.NOT_DRAWN) {
+                    break; // Try same slice again next tick
                 }
-            } while (this.currentRenderZ <= this.maximumRenderZ && (System.currentTimeMillis() - startTime) < Maplands.getMaxRenderTime());
+            } while (++this.currentRenderZ <= this.maximumRenderZ && (System.currentTimeMillis() - startTime) < Maplands.getMaxRenderTime());
 
             if (this.currentRenderZ > this.maximumRenderZ) {
                 // Fill all remaining holes with the desired background color
@@ -863,7 +829,7 @@ public class MaplandsDisplay extends MapDisplay {
                     Maplands.plugin.getCache().save(this.properties.getUniqueId(), this.getLayer());
                 }
 
-                //System.out.println("RENDER TIME: " + rendertime);
+                // CommonUtil.broadcast("Render time: " + rendertime + " ticks");
             }
         }
     }

@@ -9,16 +9,39 @@ public class MapUtil {
     /**
      * Checks whether a particular set of tile coordinates if a valid tile
      * 
-     * @param tx x-coordinate
-     * @param ty y-coordinate
-     * @param tz depth
+     * @param tx Tile x-coordinate
+     * @param ty Tile y-coordinate
+     * @param tz Tile depth
      * @return True if the coordinates represent a valid tile
      */
     public static boolean isTile(int tx, int ty, int tz) {
         return MathUtil.floorMod((tx * 3) + (tz * 2) + (-ty * 1), 6) == 4;
     }
 
-    private static int getTilePXY(int px, int py) {
+    /**
+     * Gets the depth at which this tile is drawn, modulus 3.
+     * Since tiles repeat every 3 depth levels, this allows for
+     * categorizing the tile in one of 3 depth positions.<br>
+     * <br>
+     * Some tile x/y coordinates are invalid hexagons that will
+     * never be drawn. For these tiles, -1 will be returned.
+     *
+     * @param tx Tile x-coordinate
+     * @param ty Tile y-coordinate
+     * @return depth % 3, or -1 if the tile is invalid
+     */
+    public static int getTileDepthModThree(int tx, int ty) {
+        int tmp = ((tx * 3) - ty) % 6;
+        if ((tmp & 0x1) != 0) {
+            return -1; // Must always be a multiple of 2
+        } else if (tmp < 0) {
+            return -1 - (tmp/2); // Account for negative modulus
+        } else {
+            return 2 - (tmp/2); // Normal check
+        }
+    }
+
+    public static int getTilePXY(int px, int py) {
         int dxz_fact;
         if ((px & 0x1) == 0x1) {
             dxz_fact = MathUtil.floorDiv((py + 2), 6);
@@ -42,7 +65,7 @@ public class MapUtil {
     /**
      * Performs a mathematical operation to turn tile coordinates into block coordinates
      * 
-     * @param facing view
+     * @param facing View direction
      * @param px tile x-coordinate
      * @param py tile y-coordinate
      * @param pz depth

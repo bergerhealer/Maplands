@@ -74,7 +74,7 @@ public class TestSprites {
         ZoomLevel zoom = sprite.getZoom();
 
         map.setRelativeBrushMask(zoom.getMask());
-        map.draw(sprite.getSprite(material), zoom.getDrawX(x), zoom.getDrawY(z));
+        map.draw(sprite.getSprite(material).texture, zoom.getDrawX(x), zoom.getDrawY(z));
         //map.fillRectangle(zoom.getDrawX(x), zoom.getDrawZ(z), zoom.getWidth(), zoom.getHeight(), (byte) (4 + rand.nextInt(100)));
         map.setRelativeBrushMask(null);
 
