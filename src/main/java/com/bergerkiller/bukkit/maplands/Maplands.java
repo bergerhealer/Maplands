@@ -1,9 +1,11 @@
 package com.bergerkiller.bukkit.maplands;
 
 import java.util.Locale;
+import java.util.UUID;
 import java.util.logging.Level;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -133,9 +135,58 @@ public class Maplands extends PluginBase {
 
     @Override
     public boolean command(CommandSender sender, String command, String[] args) {
-        if (args.length > 0 && args[0].equalsIgnoreCase("give")) {
+        if (args.length > 0 && args[0].equalsIgnoreCase("render")) {
+            if (!Permission.COMMAND_RENDER.has(sender)) {
+                sender.sendMessage(ChatColor.RED + "No permission to use the render command!");
+                return true;
+            }
+
+            // The /map render [uuid] command
+            if (args.length == 1) {
+                sender.sendMessage("Please specify the UUID of the maplands map to re-render");
+                sender.sendMessage("/map render [uuid]");
+                sender.sendMessage("");
+
+                boolean foundDisplay = false;
+                if (sender instanceof Player) {
+                    MaplandsDisplay display = MapDisplay.getHeldDisplay((Player) sender, MaplandsDisplay.class);
+                    if (display != null) {
+                        foundDisplay = true;
+                        display.sendRenderCommand((Player) sender);
+                    }
+                }
+                if (!foundDisplay) {
+                    sender.sendMessage("Execute this command while holding the map item to get the UUID you need");
+                }
+                return true;
+            }
+
+            // Parse uuid
+            UUID displayUUID;
+            try {
+                displayUUID = UUID.fromString(args[1]);
+            } catch (IllegalArgumentException ex) {
+                sender.sendMessage("Not a UUID: " + args[1]);
+                return true;
+            }
+
+            // Find display with this uuid
+            boolean found = false;
+            for (MaplandsDisplay display : MapDisplay.getAllDisplays(MaplandsDisplay.class)) {
+                if (displayUUID.equals(display.getProperties().getUniqueId())) {
+                    display.renderAll();
+                    found = true;
+                }
+            }
+            if (found) {
+                sender.sendMessage("The maplands map by this uuid is being re-rendered!");
+            } else {
+                sender.sendMessage("No maplands map was found with this UUID. Are the chunks loaded?");
+            }
+            return true;
+        } else if (args.length > 0 && args[0].equalsIgnoreCase("give")) {
             if (!Permission.COMMAND_GIVE.has(sender)) {
-                sender.sendMessage("No permission to use this give command!");
+                sender.sendMessage(ChatColor.RED + "No permission to use the give command!");
                 return true;
             }
 

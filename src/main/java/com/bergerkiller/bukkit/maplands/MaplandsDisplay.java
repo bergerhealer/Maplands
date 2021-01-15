@@ -30,11 +30,15 @@ import com.bergerkiller.bukkit.common.resources.SoundEffect;
 import com.bergerkiller.bukkit.common.map.MapPlayerInput.Key;
 import com.bergerkiller.bukkit.common.utils.FaceUtil;
 import com.bergerkiller.bukkit.common.utils.MathUtil;
+import com.bergerkiller.bukkit.common.wrappers.ChatText;
 import com.bergerkiller.bukkit.maplands.markers.MapMarkers;
 import com.bergerkiller.bukkit.maplands.menu.MenuButton;
+import com.bergerkiller.bukkit.maplands.menu.SettingsMenu;
 import com.bergerkiller.bukkit.maplands.util.Linked2DTile;
 import com.bergerkiller.bukkit.maplands.util.Linked2DTileList;
 import com.bergerkiller.bukkit.maplands.util.Linked2DTileSet;
+
+import net.md_5.bungee.api.ChatColor;
 
 /**
  * Main display class of Maplands. Renders the world on the map and provides
@@ -85,9 +89,9 @@ public class MaplandsDisplay extends MapDisplay {
                         rotate(-1);
                     }
                 },
-                new MenuButton("marker", 102, 1) {
+                new MenuButton("settings", 102, 1) {
                     public void onPressed() {
-                        mapMarkers.showMenu();
+                        MaplandsDisplay.this.addWidget(new SettingsMenu());
                     }
                 }
         };
@@ -252,7 +256,11 @@ public class MaplandsDisplay extends MapDisplay {
 
     public void onBlockChange(World world, int bx, int by, int bz) {
         // Check possibly in range before doing computationally expensive stuff
-        if (this.startBlock != null && world == this.startBlock.getWorld() && this.blockBounds.contains(bx, by, bz)) {
+        if (this.startBlock != null
+                && world == this.startBlock.getWorld()
+                && this.blockBounds.contains(bx, by, bz)
+                && this.isLiveRefreshing()
+        ) {
             int dx = bx - this.startBlock.getX();
             int dy = by - this.startBlock.getY();
             int dz = bz - this.startBlock.getZ();
@@ -310,7 +318,7 @@ public class MaplandsDisplay extends MapDisplay {
             // Re-render display. Also re-renders it if the world wasn't loaded, but is now.
             this.playSound(SoundEffect.EXTINGUISH);
             //this.getLayer().clear();
-            this.render(RenderMode.INITIALIZE);
+            this.renderAll();
         } else if (this.isLoaded()) {
             // No menu is shown. Simple navigation.
             if (event.getKey() == Key.UP) {
@@ -431,13 +439,63 @@ public class MaplandsDisplay extends MapDisplay {
         }
         zoomLevelIdx = MathUtil.clamp(zoomLevelIdx + n, 0, values.length - 1);
         properties.set("zoom", values[zoomLevelIdx]);
-        this.render(RenderMode.INITIALIZE);
+        this.renderAll();
     }
 
     public void rotate(int n) {
         BlockFace facing = properties.get("facing", BlockFace.NORTH_EAST);
         facing = FaceUtil.rotate(facing, n * 2);
         properties.set("facing", facing);
+        this.renderAll();
+    }
+
+    /**
+     * Sends the render command to use to render this map, to the player
+     *
+     * @param recipient
+     */
+    public void sendRenderCommand(Player recipient) {
+        recipient.sendMessage("To render the map you are holding, execute:");
+        String rcmd = "/map render " + this.getProperties().getUniqueId().toString();
+        ChatText.fromClickableSuggestedCommand(ChatColor.UNDERLINE + rcmd, rcmd)
+                .setHoverText("Type the command into the chat")
+                .sendTo(recipient);
+    }
+
+    /**
+     * Gets the map marker configuration of this maplands display
+     *
+     * @return map markers
+     */
+    public MapMarkers getMapMarkers() {
+        return this.mapMarkers;
+    }
+
+    /**
+     * Whether block changes cause the display to automatically re-render
+     * the changed blocks.
+     *
+     * @return True if refreshing live
+     */
+    public boolean isLiveRefreshing() {
+        return properties.get("liveRefresh", true);
+    }
+
+    /**
+     * Sets whether block changes cause the display to automatically re-render
+     * the changed blocks.
+     *
+     * @param live Whether live refreshing is turned on
+     */
+    public void setLiveRefreshing(boolean live) {
+        properties.set("liveRefresh", live);
+    }
+
+    /**
+     * Re-renders the display, causing all blocks shown to be re-drawn
+     * onto the map.
+     */
+    public void renderAll() {
         this.render(RenderMode.INITIALIZE);
     }
 
@@ -465,7 +523,7 @@ public class MaplandsDisplay extends MapDisplay {
             this.properties.set("px", block.getX());
             this.properties.set("py", block.getY());
             this.properties.set("pz", block.getZ());
-            this.render(RenderMode.INITIALIZE);
+            this.renderAll();
         } else {
             this.setStartBlock(block.getX(), block.getY(), block.getZ());
         }
@@ -522,7 +580,7 @@ public class MaplandsDisplay extends MapDisplay {
         int pixels_dy = zoom.getScreenY(old_tile.y) - zoom.getScreenY(new_tile.y);
         if (Math.abs(pixels_dx) >= this.getWidth() || Math.abs(pixels_dy) >= this.getHeight()) {
             // Change is so large the entire map blanks out. Just do a re-render of everything
-            this.render(RenderMode.INITIALIZE);
+            this.renderAll();
         } else {
             // Move the pixels already drawn
             getLayer().movePixels(pixels_dx, pixels_dy);
@@ -749,7 +807,7 @@ public class MaplandsDisplay extends MapDisplay {
 
         // If startBlock refers to a now-unloaded world, unload the map
         if (Bukkit.getWorld(this.startBlock.getWorld().getName()) == null) {
-            this.render(RenderMode.INITIALIZE);
+            this.renderAll();
             return;
         }
 
