@@ -198,8 +198,8 @@ public class MaplandsDisplay extends MapDisplay {
         this.minRows = -nrRows;
         this.maxRows = nrRows;
 
-        this.minimumRenderZ = -nrRows - (256 - py);
-        this.maximumRenderZ = nrRows + py;
+        this.minimumRenderZ = -nrRows - 2*(Maplands.getMaxRenderY() - py);
+        this.maximumRenderZ = nrRows + 2*(py - Maplands.getMinRenderY());
 
         this.blockBounds.update(this.facing,
                 this.minCols, this.minimumRenderZ, this.minRows,
@@ -366,9 +366,9 @@ public class MaplandsDisplay extends MapDisplay {
         int x = this.startBlock.getX() + relativeBlockCoords.x;
         int y = this.startBlock.getY() + relativeBlockCoords.y;
         int z = this.startBlock.getZ() + relativeBlockCoords.z;
-        if (y < 0) {
+        if (y < Maplands.getMinRenderY()) {
             return DrawResult.FULLY_DRAWN;
-        } else if (y >= 256) {
+        } else if (y >= Maplands.getMaxRenderY()) {
             return DrawResult.PARTIALLY_DRAWN;
         } else {
             if (!this.chunks.cacheBlock(this.startBlock.getWorld(), x, z)) {
@@ -791,7 +791,9 @@ public class MaplandsDisplay extends MapDisplay {
 
     @Override
     public void onRightClick(MapClickEvent event) {
-        event.setCancelled(true);
+        if (!event.getPlayer().isSneaking()) {
+            event.setCancelled(true);
+        }
     }
 
     @Override

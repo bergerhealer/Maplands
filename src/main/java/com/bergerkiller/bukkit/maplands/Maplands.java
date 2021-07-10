@@ -22,6 +22,8 @@ public class Maplands extends PluginBase {
     private static MapResourcePack resourcePack;
     private static int maxRenderTime = 50;
     private static byte backgroundColor = MapColorPalette.COLOR_TRANSPARENT;
+    private static int minRenderY = 0;
+    private static int maxRenderY = 256;
     private MapCanvasCache cache;
 
     public static MapResourcePack getResourcePack() {
@@ -44,6 +46,14 @@ public class Maplands extends PluginBase {
         return backgroundColor;
     }
 
+    public static int getMinRenderY() {
+        return minRenderY;
+    }
+
+    public static int getMaxRenderY() {
+        return maxRenderY;
+    }
+
 	@Override
 	public void enable() {
 	    plugin = this;
@@ -61,6 +71,14 @@ public class Maplands extends PluginBase {
 	    config.setHeader("maxRenderTime", "Specifies the maximum amount of time in milliseconds the plugin");
 	    config.addHeader("maxRenderTime", "may spend rendering the map during a single tick, per map");
 	    maxRenderTime = config.get("maxRenderTime", 50);
+
+	    config.setHeader("minRenderY", "Minimum Y-coordinate height that is rendered (inclusive)");
+	    config.addHeader("minRenderY", "Can be set to a negative number if supported (cubic chunks)");
+	    minRenderY = config.get("minRenderY", 0);
+
+	    config.setHeader("maxRenderY", "Maximum Y-coordinate height that is rendered (exclusive)");
+	    config.addHeader("maxRenderY", "Can be set to a value beyond 256 if supported (cubic chunks)");
+	    maxRenderY = config.get("maxRenderY", 256);
 
 	    config.setHeader("enableCache", "Whether map data is written to disk and restored when viewed again");
 	    config.addHeader("enableCache", "The rendered map data can be found inside the cache subdirectory");
