@@ -1,12 +1,18 @@
 name: Maplands
-main: com.bergerkiller.bukkit.maplands.Maplands
-api-version: 1.13
+dev-url: ${project.url}
 version: ${project.version}
 authors: [bergerkiller]
 description: Minecraft worlds in the map dimension
-depend: [BKCommonLib]
+softdepend: [BKCommonLib]
+api-version: 1.13
 metrics: true
-dev-url: ${project.url}
+
+main: com.bergerkiller.bukkit.maplands.Preloader
+preloader:
+    main: com.bergerkiller.bukkit.maplands.Maplands
+    depend:
+        BKCommonLib: https://www.spigotmc.org/resources/bkcommonlib.39590/
+
 commands:
     maplands:
         aliases: [map]
