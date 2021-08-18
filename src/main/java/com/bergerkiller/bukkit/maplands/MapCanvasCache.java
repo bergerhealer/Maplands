@@ -202,7 +202,7 @@ public class MapCanvasCache {
 
         int width = canvas.getWidth();
         int height = canvas.getHeight();
-        DataBufferUShort dataBuffer = new DataBufferUShort(depth, depth.length);
+        DataBufferUShort dataBuffer = new DataBufferUShort(depth.clone(), depth.length);
         ColorModel c = new ComponentColorModel(ColorSpace.getInstance(ColorSpace.CS_GRAY), new int[] {16}, false, false, ColorModel.OPAQUE, DataBuffer.TYPE_USHORT); 
         WritableRaster raster = Raster.createInterleavedRaster(dataBuffer, width, height, width, 1, new int[] {0}, null);
         return new BufferedImage(c, raster, c.isAlphaPremultiplied(), null);
