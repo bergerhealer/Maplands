@@ -1,11 +1,7 @@
 package com.bergerkiller.bukkit.maplands;
 
 import java.awt.Color;
-import java.awt.color.ColorSpace;
 import java.awt.image.BufferedImage;
-import java.awt.image.ColorModel;
-import java.awt.image.ComponentColorModel;
-import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
 import java.awt.image.DataBufferUShort;
 import java.awt.image.IndexColorModel;
@@ -202,10 +198,10 @@ public class MapCanvasCache {
 
         int width = canvas.getWidth();
         int height = canvas.getHeight();
-        DataBufferUShort dataBuffer = new DataBufferUShort(depth.clone(), depth.length);
-        ColorModel c = new ComponentColorModel(ColorSpace.getInstance(ColorSpace.CS_GRAY), new int[] {16}, false, false, ColorModel.OPAQUE, DataBuffer.TYPE_USHORT); 
-        WritableRaster raster = Raster.createInterleavedRaster(dataBuffer, width, height, width, 1, new int[] {0}, null);
-        return new BufferedImage(c, raster, c.isAlphaPremultiplied(), null);
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_USHORT_GRAY);
+        DataBufferUShort dataBuffer = (DataBufferUShort) image.getRaster().getDataBuffer();
+        System.arraycopy(depth, 0, dataBuffer.getData(), 0, depth.length);
+        return image;
     }
 
     //TODO: We no longer need this once we depend on a version of BKCommonLib that always has this method
