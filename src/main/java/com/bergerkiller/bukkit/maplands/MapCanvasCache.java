@@ -31,51 +31,57 @@ public class MapCanvasCache {
     private final File _cacheFolder;
     private final Map<UUID, Item> _cache = new ConcurrentHashMap<UUID, Item>();
     private final AsyncTask _saveTask = new AsyncTask() {
+        private final Object saveLock = new Object(); // Make sure run() only runs once.
+
         @Override
         public void run() {
-            while (true) {
-                boolean savedSomething = false;
-                long expireTime = System.currentTimeMillis() - 10*60*1000; // 10 minutes
-                Iterator<Map.Entry<UUID, Item>> iter = _cache.entrySet().iterator();
-                while (iter.hasNext()) {
-                    Map.Entry<UUID, Item> entry = iter.next();
-                    Item item = entry.getValue();
-                    if (item.saved.compareAndSet(false, true)) {
-                        UUID mapUUID = entry.getKey();
+            synchronized (saveLock) {
+                while (true) {
+                    boolean savedSomething = false;
+                    long expireTime = System.currentTimeMillis() - 10*60*1000; // 10 minutes
+                    Iterator<Map.Entry<UUID, Item>> iter = _cache.entrySet().iterator();
+                    while (iter.hasNext()) {
+                        Map.Entry<UUID, Item> entry = iter.next();
+                        Item item = entry.getValue();
+                        if (item.saved.compareAndSet(false, true)) {
+                            UUID mapUUID = entry.getKey();
 
-                        savedSomething = true;
-                        _cacheFolder.mkdirs();
+                            savedSomething = true;
+                            _cacheFolder.mkdirs();
 
-                        boolean success = true;
-                        try {
-                            success &= ImageIO.write(item.color, "gif", getColorFile(mapUUID));
-                        } catch (IOException e) {
-                            _plugin.getLogger().log(Level.SEVERE, "Failed to save color data of {" + mapUUID.toString() + "} to cache", e);
-                            success = false;
-                        }
-                        try {
-                            success &= ImageIO.write(item.depth, "png", getDepthFile(mapUUID));
-                        } catch (IOException e) {
-                            _plugin.getLogger().log(Level.SEVERE, "Failed to save depth data of {" + mapUUID.toString() + "} to cache", e);
-                            success = false;
-                        }
-                        if (!success) {
-                            // Cleanup
-                            getColorFile(mapUUID).delete();
-                            getDepthFile(mapUUID).delete();
-                        }
-                    } else if (item.created < expireTime) {
-                        iter.remove();
-                    }
-                }
-                if (!savedSomething) {
-                    synchronized (this) {
-                        if (this.isStopRequested()) {
-                            break;
-                        } else {
+                            ImageIO.setUseCache(false);
+
+                            boolean success = true;
                             try {
-                                this.wait(5000);
-                            } catch (InterruptedException e) {}
+                                success &= ImageIO.write(item.color, "gif", getColorFile(mapUUID));
+                            } catch (IOException e) {
+                                _plugin.getLogger().log(Level.SEVERE, "Failed to save color data of {" + mapUUID.toString() + "} to cache", e);
+                                success = false;
+                            }
+                            try {
+                                success &= ImageIO.write(item.depth, "png", getDepthFile(mapUUID));
+                            } catch (IOException e) {
+                                _plugin.getLogger().log(Level.SEVERE, "Failed to save depth data of {" + mapUUID.toString() + "} to cache", e);
+                                success = false;
+                            }
+                            if (!success) {
+                                // Cleanup
+                                getColorFile(mapUUID).delete();
+                                getDepthFile(mapUUID).delete();
+                            }
+                        } else if (item.created < expireTime) {
+                            iter.remove();
+                        }
+                    }
+                    if (!savedSomething) {
+                        synchronized (this) {
+                            if (this.isStopRequested()) {
+                                break;
+                            } else {
+                                try {
+                                    this.wait(5000);
+                                } catch (InterruptedException e) {}
+                            }
                         }
                     }
                 }
@@ -133,18 +139,25 @@ public class MapCanvasCache {
                 return false;
             }
 
+            // Read the images from the cache folder while NOT USING THE CACHE
             BufferedImage color, depth;
+            boolean useCacheOld = ImageIO.getUseCache();
             try {
-                color = ImageIO.read(colorFile);
-            } catch (IOException e) {
-                _plugin.getLogger().log(Level.SEVERE, "Failed to load color data of {" + mapUUID.toString() + "} from cache", e);
-                return false;
-            }
-            try {
-                depth = ImageIO.read(depthFile);
-            } catch (IOException e) {
-                _plugin.getLogger().log(Level.SEVERE, "Failed to load depth data of {" + mapUUID.toString() + "} from cache", e);
-                return false;
+                ImageIO.setUseCache(false);
+                try {
+                    color = ImageIO.read(colorFile);
+                } catch (IOException e) {
+                    _plugin.getLogger().log(Level.SEVERE, "Failed to load color data of {" + mapUUID.toString() + "} from cache", e);
+                    return false;
+                }
+                try {
+                    depth = ImageIO.read(depthFile);
+                } catch (IOException e) {
+                    _plugin.getLogger().log(Level.SEVERE, "Failed to load depth data of {" + mapUUID.toString() + "} from cache", e);
+                    return false;
+                }
+            } finally {
+                ImageIO.setUseCache(useCacheOld);
             }
             if (color.getWidth() != depth.getWidth() || color.getHeight() != depth.getHeight()) {
                 _plugin.getLogger().log(Level.SEVERE, "Failed to load data of {" + mapUUID.toString() + "} from cache: image resolutions don't match!");
