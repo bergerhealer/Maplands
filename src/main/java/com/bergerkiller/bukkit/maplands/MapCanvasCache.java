@@ -7,6 +7,8 @@ import java.awt.image.DataBufferUShort;
 import java.awt.image.IndexColorModel;
 import java.awt.image.Raster;
 import java.awt.image.WritableRaster;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
@@ -24,6 +26,7 @@ import com.bergerkiller.bukkit.common.map.MapCanvas;
 import com.bergerkiller.bukkit.common.map.MapColorPalette;
 import com.bergerkiller.bukkit.common.utils.CommonUtil;
 import com.bergerkiller.mountiplex.reflection.SafeMethod;
+import com.google.common.io.Files;
 
 public class MapCanvasCache {
     private final Maplands _plugin;
@@ -59,7 +62,7 @@ public class MapCanvasCache {
                                 success = false;
                             }
                             try {
-                                success &= ImageIO.write(item.depth, "png", getDepthFile(mapUUID));
+                                success &= writeAndVerifyPNG(item.depth, getDepthFile(mapUUID));
                             } catch (IOException e) {
                                 _plugin.getLogger().log(Level.SEVERE, "Failed to save depth data of {" + mapUUID.toString() + "} to cache", e);
                                 success = false;
@@ -257,6 +260,33 @@ public class MapCanvasCache {
             }
         }
         return toJavaImageIndexedMethod.apply(canvas);
+    }
+
+    public static boolean writeAndVerifyPNG(BufferedImage image, File outputFile) throws IOException {
+        IOException lastException = null;
+        for (int n = 0; n < 10; n++) {
+            try (ByteArrayOutputStream stream = new ByteArrayOutputStream()) {
+                if (!ImageIO.write(image, "png", stream)) {
+                    continue;
+                }
+                byte[] bytes = stream.toByteArray();
+                if (n > 0) {
+                    try {
+                        Thread.sleep(10);
+                    } catch (InterruptedException e) {}
+                }
+                if (ImageIO.read(new ByteArrayInputStream(bytes)) != null) {
+                    Files.write(bytes, outputFile);
+                    return true;
+                }
+            } catch (IOException e) {
+                lastException = e;
+            }
+        }
+        if (lastException != null) {
+            throw lastException;
+        }
+        return false;
     }
 
     public static class Item {
