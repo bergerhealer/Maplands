@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -37,8 +38,6 @@ import com.bergerkiller.bukkit.maplands.menu.SettingsMenu;
 import com.bergerkiller.bukkit.maplands.util.Linked2DTile;
 import com.bergerkiller.bukkit.maplands.util.Linked2DTileList;
 import com.bergerkiller.bukkit.maplands.util.Linked2DTileSet;
-
-import net.md_5.bungee.api.ChatColor;
 
 /**
  * Main display class of Maplands. Renders the world on the map and provides
