@@ -1,147 +1,207 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
+    <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.bergerkiller.bukkit</groupId>
-  <artifactId>Maplands</artifactId>
-  <version>1.2-SNAPSHOT</version>
-  <packaging>jar</packaging>
+    <groupId>com.bergerkiller.bukkit</groupId>
+    <artifactId>Maplands</artifactId>
+    <version>1.2-SNAPSHOT</version>
+    <packaging>jar</packaging>
 
-  <name>Maplands</name>
-  <url>http://dev.bukkit.org/bukkit-plugins/maplands/</url>
+    <name>Maplands</name>
+    <url>https://www.spigotmc.org/resources/maplands.46404/</url>
 
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.serverversion>1.16.1-R0.1</project.serverversion>
-    <project.bkcversion>1.17.1-v2-SNAPSHOT</project.bkcversion>
-    <project.preloaderversion>1.6</project.preloaderversion>
-    <junit.version>4.11</junit.version>
-  </properties>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.serverversion>1.19.3-R0.1-SNAPSHOT</project.serverversion>
+        <project.bkcversion>1.19.3-v2-SNAPSHOT</project.bkcversion>
+        <project.preloaderversion>1.6</project.preloaderversion>
+        <junit.version>4.11</junit.version>
+    </properties>
 
-  <repositories>
-    <!-- Repo for access to CraftBukkit -->
-    <repository>
-      <id>spigot-repo</id>
-      <url>https://hub.spigotmc.org/nexus/content/groups/public/</url>
-    </repository>
+    <repositories>
+        <!-- Repo for access to BKCommonLib -->
+        <repository>
+            <id>MG-Dev Jenkins CI Maven Repository</id>
+            <url>https://ci.mg-dev.eu/plugin/repository/everything</url>
+        </repository>
 
-    <!-- Repo for access to BKCommonLib, MyWorlds, SignLink -->
-    <repository>
-        <id>MG-Dev Jenkins CI Maven Repository</id>
-        <url>https://ci.mg-dev.eu/plugin/repository/everything</url>
-    </repository>
-  </repositories>
+        <!-- Repo for access to CraftBukkit -->
+        <repository>
+            <id>spigot-repo</id>
+            <url>https://hub.spigotmc.org/nexus/content/groups/public/</url>
+        </repository>
+    </repositories>
 
-  <dependencies>
-    <dependency>
-      <groupId>org.spigotmc</groupId>
-      <artifactId>spigot-api</artifactId>
-      <version>${project.serverversion}-SNAPSHOT</version>
-      <scope>provided</scope>
-    </dependency>
+    <dependencies>
+        <dependency>
+            <groupId>org.spigotmc</groupId>
+            <artifactId>spigot-api</artifactId>
+            <version>${project.serverversion}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.bergerkiller.bukkit</groupId>
+            <artifactId>BKCommonLib</artifactId>
+            <version>${project.bkcversion}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.bergerkiller.bukkit.preloader</groupId>
+            <artifactId>PluginPreloader</artifactId>
+            <version>${project.preloaderversion}</version>
+            <scope>compile</scope>
+        </dependency>
 
-    <!-- SpigotMC is only used when testing -->
-    <dependency>
-      <groupId>org.spigotmc</groupId>
-      <artifactId>spigot</artifactId>
-      <version>${project.serverversion}-SNAPSHOT</version>
-      <scope>test</scope>
-      <optional>true</optional>
-    </dependency>
+        <!-- SpigotMC is only used when testing -->
+        <dependency>
+            <groupId>org.spigotmc</groupId>
+            <artifactId>spigot</artifactId>
+            <version>${project.serverversion}</version>
+            <scope>test</scope>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 
-    <!-- Preloader -->
-    <dependency>
-        <groupId>com.bergerkiller.bukkit.preloader</groupId>
-        <artifactId>PluginPreloader</artifactId>
-        <version>${project.preloaderversion}</version>
-        <scope>compile</scope>
-    </dependency>
+    <build>
+        <defaultGoal>clean install</defaultGoal>
+        <finalName>${project.name}-${project.version}-unshaded</finalName>
 
-    <dependency>
-      <groupId>com.bergerkiller.bukkit</groupId>
-      <artifactId>BKCommonLib</artifactId>
-      <version>${project.bkcversion}</version>
-      <scope>provided</scope>
-      </dependency>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>3.8.1</version>
-      <scope>test</scope>
-    </dependency>
+        <!-- Resources (the filtering allows us to use project properties in plugin.yml) -->
+        <resources>
+            <resource>
+                <directory>src/main/java</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>plugin.yml</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/java</directory>
+                <includes>
+                    <include>**/*.png</include>
+                </includes>
+            </resource>
+        </resources>
 
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>${junit.version}</version>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
+        <!-- Plugins -->
+        <plugins>
+            <!-- Shade in the preloader -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.3</version>
+                <configuration>
+                    <createDependencyReducedPom>false</createDependencyReducedPom>
+                    <shadedArtifactAttached>true</shadedArtifactAttached>
+                    <shadedClassifierName>all</shadedClassifierName>
+                    <finalName>${project.name}-${project.version}</finalName>
+                    <relocations>
+                        <relocation>
+                            <pattern>com.bergerkiller.bukkit.preloader</pattern>
+                            <shadedPattern>com.bergerkiller.bukkit.maplands</shadedPattern>
+                        </relocation>
+                    </relocations>
+                    <artifactSet>
+                        <includes>
+                            <include>com.bergerkiller.bukkit.preloader</include>
+                        </includes>
+                    </artifactSet>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals><goal>shade</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
 
-  <!-- Build -->
-  <build>
-    <!-- Resources (the filtering allows us to use project properties in plugin.yml) -->
-    <resources>
-      <resource>
-        <directory>src/main/java</directory>
-        <filtering>true</filtering>
-        <includes>
-          <include>plugin.yml</include>
-        </includes>
-      </resource>
-      <resource>
-        <directory>src/main/java</directory>
-        <includes>
-          <include>**/*.png</include>
-        </includes>
-      </resource>
-    </resources>
-    <defaultGoal>clean install</defaultGoal>
+            <!-- Clean up original-prefixed leftovers (this is to make testing easier) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>2.4.1</version>
+                <executions>
+                    <execution>
+                        <id>auto-clean</id>
+                        <phase>package</phase>
+                        <goals><goal>clean</goal></goals>
+                        <configuration>
+                            <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                            <filesets>
+                                <fileset>
+                                    <directory>${project.build.directory}</directory>
+                                    <includes><include>original-*.jar</include></includes>
+                                    <followSymlinks>false</followSymlinks>
+                                </fileset>
+                            </filesets>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
 
-    <!-- Plugins -->
-    <plugins>
-      <!-- Shade in the preloader -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>3.2.3</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <createDependencyReducedPom>true</createDependencyReducedPom>
-          <relocations>
-            <relocation>
-              <pattern>com.bergerkiller.bukkit.preloader</pattern>
-              <shadedPattern>com.bergerkiller.bukkit.maplands</shadedPattern>
-            </relocation>
-          </relocations>
-          <artifactSet>
-            <includes>
-              <include>com.bergerkiller.bukkit.preloader</include>
-            </includes>
-          </artifactSet>
-        </configuration>
-      </plugin>
+            <!-- Compiler plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.10.1</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                    <showWarnings>true</showWarnings>
+                    <showDeprecation>true</showDeprecation>
+                </configuration>
+            </plugin>
 
-      <!-- Compiler plugin -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.0</version>
-        <configuration>
-          <source>1.8</source>
-          <target>1.8</target>
-          <showWarnings>true</showWarnings>
-          <showDeprecation>true</showDeprecation>
-        </configuration>
-      </plugin>
+            <!-- Generate a jar containing the source javadoc -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.4.1</version>
+                <configuration>
+                    <finalName>${project.name}-${project.version}</finalName>
+                    <failOnError>false</failOnError>
+                    <doclint>none</doclint>
+                    <quiet>true</quiet>
+                    <source>8</source>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals><goal>jar</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
 
-    </plugins>
-  </build>
+            <!-- Generate a jar containing the java sources -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.2.1</version>
+                <configuration>
+                    <finalName>${project.name}-${project.version}</finalName>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals><goal>jar-no-fork</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <!-- For deploying on https://ci.mg-dev.eu/plugin/repository/ -->
+    <distributionManagement>
+        <repository>
+            <id>mg-dev-repo</id>
+            <name>ci.mg-dev.eu repository</name>
+            <url>https://ci.mg-dev.eu/plugin/repository/everything</url>
+        </repository>
+    </distributionManagement>
 </project>
