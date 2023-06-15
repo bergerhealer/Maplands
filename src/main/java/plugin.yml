@@ -7,6 +7,10 @@ softdepend: [BKCommonLib]
 api-version: 1.13
 metrics: true
 
+bstats:
+    enabled: true
+    plugin-id: 18766
+
 main: com.bergerkiller.bukkit.maplands.Preloader
 preloader:
     main: com.bergerkiller.bukkit.maplands.Maplands
