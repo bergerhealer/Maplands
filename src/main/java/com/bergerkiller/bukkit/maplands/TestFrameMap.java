@@ -1,8 +1,6 @@
 package com.bergerkiller.bukkit.maplands;
 
-import org.bukkit.inventory.ItemStack;
-
-import com.bergerkiller.bukkit.common.utils.ItemUtil;
+import com.bergerkiller.bukkit.common.inventory.CommonItemStack;
 
 /**
  * Used to be named like this. Is here so that maps can still be loaded from nbt
@@ -15,8 +13,8 @@ public class TestFrameMap extends MaplandsDisplay {
 
         // Change the display class to be the base class instead
         // This makes sure that in the future, displays use MaplandsDisplay instead of TestFrameMap
-        ItemStack item = ItemUtil.cloneItem(this.getMapItem());
-        ItemUtil.getMetaTag(item, true).putValue("mapDisplayClass", MaplandsDisplay.class.getName());
-        this.setMapItem(item);
+        CommonItemStack commonItem = CommonItemStack.copyOf(this.getMapItem());
+        commonItem.updateCustomData(tag -> tag.putValue("mapDisplayClass", MaplandsDisplay.class.getName()));
+        this.setMapItem(commonItem.toBukkit());
     }
 }
